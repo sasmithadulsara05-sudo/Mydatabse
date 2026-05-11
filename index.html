@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Secure Stealth Chat</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/otpauth/9.1.2/otpauth.umd.min.js"></script>
+
+    <style>
+        /* Full Screen & Anti-Zoom for outside elements */
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; background-color: #0E1621; color: white; }
+        
+        #lockScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #0E1621; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+        .auth-container { width: 85%; max-width: 350px; text-align: center; }
+        
+        input[type="number"] { width: 100%; padding: 20px; font-size: 28px; text-align: center; border-radius: 12px; border: 1px solid #1a1a1a; background: #0a0a0a; color: #0f0; margin-bottom: 20px; letter-spacing: 8px; box-sizing: border-box; outline: none; box-shadow: inset 0 0 10px #000; }
+        .btn-confirm { width: 100%; background-color: #075e54; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        #loaderArea { display: none; margin-top: 25px; flex-direction: column; align-items: center; }
+        .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #0f0; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .checking-text { margin-top: 10px; font-size: 14px; color: #0f0; font-family: monospace; letter-spacing: 1px; }
+
+        #mainApp { display: none; height: 100%; width: 100%; background-color: #0E1621; }
+        
+        .header-container { background-color: #17212B; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2B3139; font-size: 20px; font-weight: bold; }
+        .header-right { font-size: 24px; cursor: pointer; color: #B3B3B3; }
+        .header-left { display: flex; align-items: center; }
+
+        #homeView { display: flex; flex-direction: column; height: 100%; width: 100%; }
+        .search-container { background-color: #0E1621; padding: 10px 15px; border-bottom: 1px solid #2B3139; }
+        .search-bar { background-color: #242F3D; border-radius: 25px; display: flex; align-items: center; padding: 0 15px; height: 40px; }
+        #searchInput { background: transparent; border: none; color: white; outline: none; width: 100%; font-size: 15px; margin-left: 8px; }
+        #searchInput::placeholder { color: #8F97A3; }
+        
+        .chat-list { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        .chat-list-item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; transition: background 0.2s; }
+        .chat-list-item:active { background: #2B3139; }
+        .chat-avatar { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; margin-right: 15px; color: white; background: #E91E63; flex-shrink: 0; }
+        .chat-info { flex: 1; border-bottom: 1px solid #17212B; padding-bottom: 10px; padding-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-name { font-size: 16px; font-weight: bold; margin-bottom: 5px; color: white; }
+        .chat-preview { font-size: 14px; color: #8F97A3; }
+
+        .fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: #EE4488; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 100; transition: transform 0.2s; }
+        .fab:active { transform: scale(0.9); }
+
+        #chatView { display: none; flex-direction: column; height: 100%; width: 100%; background-color: #0E1621; }
+        .back-btn { margin-right: 15px; cursor: pointer; display: flex; align-items: center; }
+        #status { display: none; }
+        
+        /* Fixed Chat Background - Scroll & Zoom allowed here */
+        #chatBox { 
+            flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px; display: flex; flex-direction: column; gap: 10px; 
+            background-color: #0F0F0F; 
+            background-image: url('https://i.postimg.cc/s1ds1wcn/IMG-20260511-145844-699.jpg'); 
+            background-size: cover; 
+            background-position: center; 
+            touch-action: pan-y pinch-zoom; 
+            scroll-behavior: smooth;
+        }
+        
+        /* Styled Message Bubbles */
+        .msg { 
+            max-width: 75%; padding: 8px 12px 4px 12px; border-radius: 12px 12px 0 12px; 
+            background: #ab4e68; 
+            align-self: flex-end; font-size: 15px; word-wrap: break-word; color: white; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3); display: flex; flex-direction: column;
+            user-select: none; 
+        }
+        
+        .msg-media-container { position: relative; display: block; margin-top: 5px; border-radius: 8px; overflow: hidden; }
+        .msg-media-container img, .msg-media-container video { width: 100%; max-width: 100%; display: block; border-radius: 8px; }
+        
+        .upload-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; border-radius: 8px; z-index: 10; backdrop-filter: blur(2px); }
+        .upload-spinner { width: 35px; height: 35px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 8px; }
+        .upload-text { font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.6); padding: 3px 8px; border-radius: 12px; font-family: monospace; }
+        
+        .msg-meta { font-size: 11px; color: rgba(255,255,255,0.7); align-self: flex-end; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+        .ticks { color: #EE4488; font-weight: bold; font-size: 12px; }
+
+        /* Input Area & Image Preview */
+        .input-wrapper { background-color: #17212B; display: flex; flex-direction: column; border-top: 1px solid #2B3139; }
+        #imagePreviewContainer { display: none; padding: 10px 15px; position: relative; background: #242F3D; border-top-left-radius: 15px; border-top-right-radius: 15px; margin: 5px 5px 0 5px; }
+        #imagePreview { max-height: 120px; border-radius: 8px; }
+        .close-preview { position: absolute; top: 15px; left: 20px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
+        
+        .input-area { padding: 10px; display: flex; gap: 10px; align-items: center; }
+        #msgInput { flex: 1; padding: 12px; border-radius: 25px; border: none; background-color: #242F3D; color: white; outline: none; font-size: 16px; }
+        #msgInput::placeholder { color: #8F97A3; }
+        .send-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0 5px; }
+        .attach-btn { cursor: pointer; display: flex; align-items: center; padding: 0 5px; }
+
+        /* --- Custom Modals & Toast Styles --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(3px); }
+        .modal-box { background: #17212B; padding: 25px 20px; border-radius: 16px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .modal-title { font-size: 17px; margin-bottom: 20px; color: white; line-height: 1.4; }
+        .modal-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #2B3139; background: #242F3D; color: white; margin-bottom: 20px; outline: none; box-sizing: border-box; font-size: 16px; }
+        .modal-actions { display: flex; justify-content: space-between; gap: 12px; }
+        .modal-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .modal-btn.cancel { background: transparent; color: #8F97A3; border: 1px solid #8F97A3; }
+        .modal-btn.ok { background: #EE4488; color: white; }
+
+        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #E91E63; color: white; padding: 10px 20px; border-radius: 25px; font-size: 14px; font-weight: bold; display: none; z-index: 10001; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+    </style>
+</head>
+<body>
+
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-box">
+            <div id="modalTitle" class="modal-title"></div>
+            <input type="text" id="modalInput" class="modal-input" style="display:none;" autocomplete="off">
+            <div class="modal-actions">
+                <button id="modalBtnCancel" class="modal-btn cancel">Cancel</button>
+                <button id="modalBtnOk" class="modal-btn ok">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast">Copied!</div>
+
+    <div id="lockScreen">
+        <div class="auth-container">
+            <input type="number" id="otpCode" placeholder="000000">
+            <button id="confirmBtn" class="btn-confirm" onclick="startCheck()">CONFIRM ACCESS</button>
+            <div id="loaderArea"><div class="spinner"></div><div class="checking-text">System checking...</div></div>
+        </div>
+    </div>
+
+    <div id="mainApp">
+        <div id="homeView">
+            <div class="header-container">
+                <div class="header-left">
+                    My Database 
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 88 88" style="margin-left:10px; fill: #00adef; vertical-align: middle;">
+                        <path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L0 76.012v-29.8zm4.326-39.06L87.314 0v41.527H39.996zm0 43.16h47.318V88l-47.318-6.66z"/>
+                    </svg>
+                </div>
+                <div class="header-right">&#8942;</div>
+            </div>
+            
+            <div class="search-container">
+                <div class="search-bar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8F97A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search Chats" oninput="filterChats()">
+                </div>
+            </div>
+            
+            <div class="chat-list" id="chatList">
+                <div class="chat-list-item" id="group-Normal-text" onclick="openChat('Normal text')">
+                    <div class="chat-avatar" style="background: #E91E63;">N</div>
+                    <div class="chat-info">
+                        <div class="chat-name">Normal text</div>
+                        <div class="chat-preview">Tap to view messages...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="fab" onclick="createNewGroup()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white">
+                    <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+            </div>
+        </div>
+
+        <div id="chatView">
+            <div class="header-container">
+                <div style="display: flex; align-items: center;">
+                    <span class="back-btn" onclick="closeChat()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    </span>
+                    <span id="chatTitle" style="margin-left: 10px;">Normal text</span>
+                </div>
+                <div class="header-right">&#8942;</div>
+            </div>
+            
+            <div id="status">Connecting...</div>
+            <div id="chatBox"></div>
+            
+            <div class="input-wrapper">
+                <div id="imagePreviewContainer">
+                    <img id="imagePreview" src="">
+                    <div class="close-preview" onclick="clearImagePreview()">✕</div>
+                </div>
+
+                <div class="input-area">
+                    <label for="fileInput" class="attach-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="#8F97A3" viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
+                    </label>
+                    <input type="file" id="fileInput" style="display:none;" accept="image/*,video/*">
+                    <input type="text" id="msgInput" placeholder="Message">
+                    
+                    <button onclick="sendMessage()" class="send-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="#EE4488" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Zoom Script restricted ONLY to Chat Box
+        document.addEventListener('touchmove', function(event) {
+            if (event.scale !== 1 && !event.target.closest('#chatBox')) { event.preventDefault(); }
+        }, { passive: false });
+        
+        document.addEventListener('gesturestart', function(e) { 
+            if(!e.target.closest('#chatBox')) e.preventDefault(); 
+        });
+
+        // --- Custom Dialogs ---
+        function showModal(title, isInput, showCancel, callback) {
+            const modal = document.getElementById('customModal');
+            const input = document.getElementById('modalInput');
+            const btnCancel = document.getElementById('modalBtnCancel');
+            const btnOk = document.getElementById('modalBtnOk');
+
+            document.getElementById('modalTitle').innerHTML = title;
+            input.style.display = isInput ? 'block' : 'none';
+            input.value = '';
+            btnCancel.style.display = showCancel ? 'block' : 'none';
+            modal.style.display = 'flex';
+
+            if(isInput) input.focus();
+
+            btnCancel.onclick = () => {
+                modal.style.display = 'none';
+                if(callback) callback(null);
+            };
+
+            btnOk.onclick = () => {
+                modal.style.display = 'none';
+                if(callback) callback(isInput ? input.value : true);
+            };
+        }
+
+        function customAlert(msg) { showModal(msg, false, false, null); }
+        function customPrompt(msg, callback) { showModal(msg, true, true, callback); }
+        function customConfirm(msg, callback) { showModal(msg, false, true, callback); }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2000);
+        }
+
+        // Format Bytes
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        const SECRET = "MYSECURECHATXNEW"; // Do NOT remove. Required for client-side OTP validation.
+        let currentChatGroup = null;
+        let currentSubscription = null;
+
+        const supabaseUrl = 'https://aoblszvunztqlgobzlxe.supabase.co';
+        const supabaseKey = 'sb_publishable_OIab5QIgXV4fXzt7x3-gkg_SzOO5TPt'; 
+        const _supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBmgMPkOfyT26iN9PKFqIA85CbhrpYU7M0",
+            authDomain: "mydatabase-9ad22.firebaseapp.com",
+            projectId: "mydatabase-9ad22",
+            storageBucket: "mydatabase-9ad22.firebasestorage.app",
+            messagingSenderId: "628962854635",
+            appId: "1:628962854635:web:bd21859cab0bbdc101e0ae"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const _db = firebase.firestore();
+
+        function startCheck() {
+            let code = document.getElementById('otpCode').value;
+            if(code.length < 6) return customAlert("Please enter the 6-digit code.");
+            document.getElementById('confirmBtn').style.display = 'none';
+            document.getElementById('loaderArea').style.display = 'flex';
+            setTimeout(verifyCode, 2000); 
+        }
+
+        function verifyCode() {
+            let code = document.getElementById('otpCode').value;
+            let totp = new OTPAuth.TOTP({ secret: SECRET, digits: 6, period: 30 });
+            let isValid = totp.validate({ token: code, window: 0 });
+
+            if (isValid !== null) {
+                localStorage.setItem('2fa_setup', 'true');
+                document.getElementById('lockScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block'; 
+                loadSavedGroups(); 
+            } else {
+                customAlert("Invalid or expired code!");
+                document.getElementById('confirmBtn').style.display = 'block';
+                document.getElementById('loaderArea').style.display = 'none';
+                document.getElementById('otpCode').value = '';
+            }
+        }
+
+        // --- GROUP FUNCTIONS ---
+        function createNewGroup() {
+            customPrompt("Enter new Chat/Group Name:", async function(groupName) {
+                if (groupName && groupName.trim() !== "") {
+                    let colors = ['#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#009688', '#FF9800', '#4CAF50', '#F44336'];
+                    let randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    let groupData = { name: groupName.trim(), color: randomColor };
+
+                    try { await _db.collection("chat_groups").add(groupData); } catch(e) { console.error(e); }
+                    
+                    let savedGroups = JSON.parse(localStorage.getItem('myCustomGroups') || '[]');
+                    if(!savedGroups.some(g => g.name === groupData.name)) {
+                        savedGroups.push(groupData);
+                        localStorage.setItem('myCustomGroups', JSON.stringify(savedGroups));
+                    }
+                    
+                    renderGroup(groupData.name, randomColor);
+                }
+            });
+        }
+
+        async function loadSavedGroups() {
+            let savedGroups = JSON.parse(localStorage.getItem('myCustomGroups') || '[]');
+            savedGroups.forEach(group => renderGroup(group.name, group.color));
+
+            try {
+                let snapshot = await _db.collection("chat_groups").get();
+                let dbGroups = [];
+                snapshot.forEach(doc => {
+                    let data = doc.data();
+                    dbGroups.push(data);
+                    renderGroup(data.name, data.color);
+                });
+                localStorage.setItem('myCustomGroups', JSON.stringify(dbGroups));
+            } catch(e) { console.error(e); }
+        }
+
+        function renderGroup(name, bgColor) {
+            let safeId = "group-" + name.replace(/\s+/g, '-');
+            if(document.getElementById(safeId)) return; 
+            
+            let firstLetter = name.charAt(0).toUpperCase();
+            let newItem = document.createElement('div');
+            newItem.className = 'chat-list-item';
+            newItem.id = safeId;
+            newItem.onclick = function() { openChat(name); };
+            newItem.innerHTML = `
+                <div class="chat-avatar" style="background: ${bgColor};">${firstLetter}</div>
+                <div class="chat-info">
+                    <div class="chat-name">${name}</div>
+                    <div class="chat-preview">Tap to view messages...</div>
+                </div>
+            `;
+            document.getElementById('chatList').appendChild(newItem);
+        }
+
+        function filterChats() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let chatItems = document.querySelectorAll('#chatList .chat-list-item');
+            
+            chatItems.forEach(function(item) {
+                let name = item.querySelector('.chat-name').innerText.toLowerCase();
+                item.style.display = (name.indexOf(input) > -1) ? "flex" : "none";
+            });
+        }
+
+        // --- CHAT FUNCTIONS ---
+        function openChat(chatName) {
+            currentChatGroup = chatName; 
+            document.getElementById('chatTitle').innerText = chatName;
+            document.getElementById('homeView').style.display = 'none';
+            document.getElementById('chatView').style.display = 'flex';
+            document.getElementById('chatBox').innerHTML = ''; 
+            
+            loadLocalMessages(chatName); 
+            initChat(chatName); 
+        }
+
+        function closeChat() {
+            document.getElementById('chatView').style.display = 'none';
+            document.getElementById('homeView').style.display = 'flex';
+            currentChatGroup = null;
+        }
+
+        function loadLocalMessages(group) {
+            let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
+            let groupMsgs = backups.filter(m => m.group_name === group);
+            groupMsgs.forEach(displayMsg);
+            
+            const box = document.getElementById('chatBox');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function initChat(group) {
+            if(currentSubscription) _supabase.removeChannel(currentSubscription);
+
+            let { data } = await _supabase.from('user_data').select('*').eq('group_name', group).order('id', { ascending: true });
+            
+            if (data) {
+                let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
+                backups = backups.filter(m => m.group_name !== group); 
+                backups.push(...data); 
+                localStorage.setItem('chat_backup', JSON.stringify(backups));
+                
+                data.forEach(displayMsg);
+            }
+            
+            currentSubscription = _supabase.channel('room_' + group.replace(/\s+/g, ''))
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_data' }, p => {
+                    if(p.new.group_name === currentChatGroup) displayMsg(p.new);
+                })
+                .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'user_data' }, p => {
+                    const el = document.getElementById('msg-' + p.old.id);
+                    if(el) el.remove();
+                })
+                .subscribe();
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('imagePreviewContainer').style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function clearImagePreview() {
+            document.getElementById('fileInput').value = '';
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+        }
+
+        function displayMsg(m) {
+            if(m.group_name && m.group_name !== currentChatGroup) return; 
+
+            const box = document.getElementById('chatBox');
+            if(document.getElementById('msg-' + m.id)) return; 
+
+            const div = document.createElement('div');
+            div.className = 'msg';
+            div.id = 'msg-' + m.id;
+
+            let contentHtml = `<div>${m.text || ''}</div>`;
+            if (m.media_url) {
+                contentHtml += `<div class="msg-media-container">`;
+                if (m.media_url.includes('video') || m.media_url.match(/\.(mp4|mov)$/i)) {
+                    contentHtml += `<video src="${m.media_url}" controls></video>`;
+                } else {
+                    contentHtml += `<img src="${m.media_url}">`;
+                }
+                contentHtml += `</div>`;
+            }
+
+            let timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if(m.created_at) timeString = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            div.innerHTML = `${contentHtml}<div class="msg-meta">${timeString} <span class="ticks">✓✓</span></div>`;
+
+            // Long Press Delete & Double Tap Copy Logic
+            let pressTimer;
+            let lastTap = 0;
+
+            const startPress = () => {
+                pressTimer = setTimeout(() => {
+                    customConfirm("මෙම පණිවිඩය මකා දමන්නද?<br><span style='font-size:12px;color:#8F97A3;'>(Delete Message?)</span>", function(res) {
+                        if(res) deleteMessage(m.id);
+                    });
+                }, 800);
+            };
+            const cancelPress = () => clearTimeout(pressTimer);
+
+            div.addEventListener('touchstart', startPress);
+            div.addEventListener('mousedown', startPress);
+            
+            div.addEventListener('touchmove', cancelPress);
+            div.addEventListener('mouseleave', cancelPress);
+            
+            div.addEventListener('mouseup', function(e) {
+                cancelPress();
+            });
+
+            // Double tap logic for Touch
+            div.addEventListener('touchend', function(e) {
+                cancelPress();
+                let currentTime = new Date().getTime();
+                let tapLength = currentTime - lastTap;
+                if (tapLength < 300 && tapLength > 0) {
+                    if(m.text) {
+                        navigator.clipboard.writeText(m.text).then(() => { showToast("Copied!"); });
+                    }
+                    e.preventDefault();
+                }
+                lastTap = currentTime;
+            });
+
+            // Double Click logic for PC
+            div.addEventListener('dblclick', function(e) {
+                if(m.text) {
+                    navigator.clipboard.writeText(m.text).then(() => { showToast("Copied!"); });
+                }
+            });
+
+            box.appendChild(div);
+            setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
+        }
+
+        async function deleteMessage(id) {
+            try {
+                await _supabase.from('user_data').delete().eq('id', id);
+                const el = document.getElementById('msg-' + id);
+                if(el) el.remove();
+                
+                let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
+                backups = backups.filter(m => m.id !== id);
+                localStorage.setItem('chat_backup', JSON.stringify(backups));
+            } catch (error) { console.error("Error deleting:", error); }
+        }
+
+        async function sendMessage() {
+            const text = document.getElementById('msgInput').value;
+            const file = document.getElementById('fileInput').files[0];
+            if (!text && !file) return;
+
+            document.getElementById('msgInput').value = '';
+            clearImagePreview();
+            
+            const box = document.getElementById('chatBox');
+            let tempId = 'temp-' + Date.now();
+            let url = '';
+
+            if (file) {
+                const div = document.createElement('div');
+                div.className = 'msg';
+                div.id = tempId;
+
+                let fileUrl = URL.createObjectURL(file); 
+                let mediaHtml = file.type.includes('video') ? `<video src="${fileUrl}"></video>` : `<img src="${fileUrl}">`;
+                let totalSizeStr = formatBytes(file.size);
+
+                div.innerHTML = `
+                    <div>${text || ''}</div>
+                    <div class="msg-media-container">
+                        ${mediaHtml}
+                        <div class="upload-overlay">
+                            <div class="upload-spinner"></div>
+                            <div class="upload-text" id="${tempId}-progress">0 KB / ${totalSizeStr}</div>
+                        </div>
+                    </div>
+                    <div class="msg-meta">Sending...</div>
+                `;
+                box.appendChild(div);
+                box.scrollTop = box.scrollHeight;
+
+                let fakeBytes = 0;
+                let fakeInterval = setInterval(() => {
+                    fakeBytes += file.size / 10;
+                    if(fakeBytes > file.size) fakeBytes = file.size;
+                    let textEl = document.getElementById(`${tempId}-progress`);
+                    if(textEl) textEl.innerText = `${formatBytes(fakeBytes)} / ${totalSizeStr}`;
+                }, 400);
+
+                div.dataset.intervalId = fakeInterval;
+            }
+            
+            try {
+                if (file) {
+                    const name = Date.now() + "_" + file.name;
+                    await _supabase.storage.from('chat_media').upload(name, file);
+                    url = _supabase.storage.from('chat_media').getPublicUrl(name).data.publicUrl;
+                }
+                
+                let payload = { text: text, sender: 'me', media_url: url, group_name: currentChatGroup };
+                
+                let { data, error } = await _supabase.from('user_data').insert([payload]).select();
+                if(error) throw error;
+                
+                await _db.collection("user_data_backup").add({...payload, time: new Date()});
+                
+                let tempEl = document.getElementById(tempId);
+                if(tempEl) {
+                    clearInterval(tempEl.dataset.intervalId);
+                    tempEl.remove();
+                }
+
+                if(data && data[0]) {
+                    let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
+                    backups.push(data[0]);
+                    localStorage.setItem('chat_backup', JSON.stringify(backups));
+                    displayMsg(data[0]); 
+                }
+                
+            } catch (e) { 
+                let tempEl = document.getElementById(tempId);
+                if(tempEl) tempEl.remove();
+                customAlert("Error: " + e.message); 
+            }
+        }
+    </script>
+</body>
+</html>
