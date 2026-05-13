@@ -51,7 +51,6 @@
         .back-btn { margin-right: 15px; cursor: pointer; display: flex; align-items: center; }
         #status { display: none; }
         
-        /* Fixed Chat Background - Scroll & Zoom allowed here */
         #chatBox { 
             flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px; display: flex; flex-direction: column; gap: 10px; 
             background-color: #0F0F0F; 
@@ -62,17 +61,9 @@
             scroll-behavior: smooth;
         }
         
-        /* Styled Message Bubbles */
-        .msg { 
-            max-width: 75%; padding: 8px 12px 4px 12px; border-radius: 12px 12px 0 12px; 
-            background: #ab4e68; 
-            align-self: flex-end; font-size: 15px; word-wrap: break-word; color: white; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.3); display: flex; flex-direction: column;
-            user-select: none; 
-        }
-        
+        .msg { max-width: 75%; padding: 8px 12px 4px 12px; border-radius: 12px 12px 0 12px; background: #ab4e68; align-self: flex-end; font-size: 15px; word-wrap: break-word; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.3); display: flex; flex-direction: column; user-select: none; }
         .msg-media-container { position: relative; display: block; margin-top: 5px; border-radius: 8px; overflow: hidden; }
-        .msg-media-container img, .msg-media-container video { width: 100%; max-width: 100%; display: block; border-radius: 8px; }
+        .msg-media-container img, .msg-media-container video, .msg-media-container audio { width: 100%; max-width: 100%; display: block; border-radius: 8px; }
         
         .upload-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; border-radius: 8px; z-index: 10; backdrop-filter: blur(2px); }
         .upload-spinner { width: 35px; height: 35px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 8px; }
@@ -81,22 +72,16 @@
         .msg-meta { font-size: 11px; color: rgba(255,255,255,0.7); align-self: flex-end; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
         .ticks { color: #EE4488; font-weight: bold; font-size: 12px; }
 
-        /* Input Area & Image Preview */
         .input-wrapper { background-color: #17212B; display: flex; flex-direction: column; border-top: 1px solid #2B3139; }
-        #imagePreviewContainer { display: none; padding: 10px 15px; position: relative; background: #242F3D; border-top-left-radius: 15px; border-top-right-radius: 15px; margin: 5px 5px 0 5px; }
-        #imagePreview { max-height: 120px; border-radius: 8px; }
+        #imagePreviewContainer { display: none; padding: 10px 15px; position: relative; background: #242F3D; border-top-left-radius: 15px; border-top-right-radius: 15px; margin: 5px 5px 0 5px; text-align: center; }
+        #imagePreview { max-height: 120px; border-radius: 8px; display: inline-block; }
         .close-preview { position: absolute; top: 15px; left: 20px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
         
-        .input-area { padding: 10px; display: flex; gap: 10px; align-items: flex-end; /* Changed to flex-end so buttons stay at bottom when textarea grows */ }
-        
-        /* New Textarea Styles */
+        .input-area { padding: 10px; display: flex; gap: 10px; align-items: flex-end; }
         #msgInput { flex: 1; padding: 12px 15px; border-radius: 22px; border: none; background-color: #242F3D; color: white; outline: none; font-size: 16px; resize: none; max-height: 120px; overflow-y: auto; font-family: sans-serif; box-sizing: border-box; height: 44px; line-height: 20px; }
         #msgInput::placeholder { color: #8F97A3; }
-        
-        /* Aligning buttons with the new textarea */
         .send-btn, .attach-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0 5px; margin-bottom: 9px; }
 
-        /* --- Custom Modals & Toast Styles --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(3px); }
         .modal-box { background: #17212B; padding: 25px 20px; border-radius: 16px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .modal-title { font-size: 17px; margin-bottom: 20px; color: white; line-height: 1.4; }
@@ -108,6 +93,17 @@
 
         #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #E91E63; color: white; padding: 10px 20px; border-radius: 25px; font-size: 14px; font-weight: bold; display: none; z-index: 10001; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
+        /* --- Call System UI Styles --- */
+        #callScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0E1621; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100000; text-align: center; }
+        .call-avatar { width: 120px; height: 120px; border-radius: 50%; background: #242F3D; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; border: 3px solid #EE4488; box-shadow: 0 0 20px rgba(238, 68, 136, 0.4); }
+        #callStatusText { font-size: 22px; font-weight: bold; color: white; margin-bottom: 10px; }
+        #callIpDisplay { color: #0f0; font-family: monospace; font-size: 16px; margin-bottom: 20px; height: 20px; }
+        #callLinkDisplay { background: #17212B; padding: 15px; border-radius: 12px; font-size: 13px; color: #8F97A3; word-break: break-all; margin: 0 20px 30px 20px; max-width: 400px; border: 1px solid #2B3139; display: none; }
+        #endCallBtn { background: #F44336; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; display: none; transition: transform 0.2s; box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4); }
+        #endCallBtn:active { transform: scale(0.95); }
+        
+        .pulse { animation: pulse-animation 1.5s infinite; }
+        @keyframes pulse-animation { 0% { box-shadow: 0 0 0 0px rgba(238, 68, 136, 0.5); } 100% { box-shadow: 0 0 0 30px rgba(238, 68, 136, 0); } }
     </style>
 </head>
 <body>
@@ -124,6 +120,18 @@
     </div>
     
     <div id="toast">Copied!</div>
+
+    <!-- Call System Screen -->
+    <div id="callScreen">
+        <div class="call-avatar pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="#EE4488" viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.03 21c.78 0 1.05-.62 1.05-1.15v-3.48c0-.54-.45-.99-.99-.99z"/></svg>
+        </div>
+        <div id="callStatusText">Initializing...</div>
+        <div id="callIpDisplay"></div>
+        <div id="callLinkDisplay"></div>
+        <button id="endCallBtn" onclick="endCall()">End Call</button>
+        <audio id="remoteAudio" autoplay style="display:none;"></audio>
+    </div>
 
     <div id="lockScreen">
         <div class="auth-container">
@@ -142,7 +150,7 @@
                         <path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L0 76.012v-29.8zm4.326-39.06L87.314 0v41.527H39.996zm0 43.16h47.318V88l-47.318-6.66z"/>
                     </svg>
                 </div>
-                <div class="header-right">&#8942;</div>
+                <div class="header-right" onclick="startCallHost()">&#8942;</div>
             </div>
             
             <div class="search-container">
@@ -179,7 +187,7 @@
                     </span>
                     <span id="chatTitle" style="margin-left: 10px;">Normal text</span>
                 </div>
-                <div class="header-right">&#8942;</div>
+                <div class="header-right" onclick="startCallHost()">&#8942;</div>
             </div>
             
             <div id="status">Connecting...</div>
@@ -195,7 +203,7 @@
                     <label for="fileInput" class="attach-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="#8F97A3" viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
                     </label>
-                    <input type="file" id="fileInput" style="display:none;" accept="image/*,video/*">
+                    <input type="file" id="fileInput" style="display:none;" accept="image/*,video/*,application/pdf,.doc,.docx,.txt,.zip" multiple>
                     
                     <textarea id="msgInput" placeholder="Message" rows="1"></textarea>
                     
@@ -208,23 +216,19 @@
     </div>
 
     <script>
-        // Zoom Script restricted ONLY to Chat Box
         document.addEventListener('touchmove', function(event) {
             if (event.scale !== 1 && !event.target.closest('#chatBox')) { event.preventDefault(); }
         }, { passive: false });
-        
         document.addEventListener('gesturestart', function(e) { 
             if(!e.target.closest('#chatBox')) e.preventDefault(); 
         });
 
-        // Auto-expand Textarea Script
         const msgInput = document.getElementById('msgInput');
         msgInput.addEventListener('input', function() {
-            this.style.height = '44px'; // Reset height
-            this.style.height = (this.scrollHeight) + 'px'; // Set new height based on content
+            this.style.height = '44px';
+            this.style.height = (this.scrollHeight) + 'px'; 
         });
 
-        // --- Custom Dialogs ---
         function showModal(title, isInput, showCancel, callback) {
             const modal = document.getElementById('customModal');
             const input = document.getElementById('modalInput');
@@ -236,18 +240,10 @@
             input.value = '';
             btnCancel.style.display = showCancel ? 'block' : 'none';
             modal.style.display = 'flex';
-
             if(isInput) input.focus();
 
-            btnCancel.onclick = () => {
-                modal.style.display = 'none';
-                if(callback) callback(null);
-            };
-
-            btnOk.onclick = () => {
-                modal.style.display = 'none';
-                if(callback) callback(isInput ? input.value : true);
-            };
+            btnCancel.onclick = () => { modal.style.display = 'none'; if(callback) callback(null); };
+            btnOk.onclick = () => { modal.style.display = 'none'; if(callback) callback(isInput ? input.value : true); };
         }
 
         function customAlert(msg) { showModal(msg, false, false, null); }
@@ -261,7 +257,6 @@
             setTimeout(() => { toast.style.display = 'none'; }, 2000);
         }
 
-        // Format Bytes
         function formatBytes(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
@@ -270,9 +265,10 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
-        const SECRET = "MYSECURECHATXNEW"; // Do NOT remove. Required for client-side OTP validation.
+        const SECRET = "MYSECURECHATXNEW"; 
         let currentChatGroup = null;
         let currentSubscription = null;
+        window.selectedFilesToUpload = [];
 
         const supabaseUrl = 'https://aoblszvunztqlgobzlxe.supabase.co';
         const supabaseKey = 'sb_publishable_OIab5QIgXV4fXzt7x3-gkg_SzOO5TPt'; 
@@ -315,7 +311,6 @@
             }
         }
 
-        // --- GROUP FUNCTIONS ---
         function createNewGroup() {
             customPrompt("Enter new Chat/Group Name:", async function(groupName) {
                 if (groupName && groupName.trim() !== "") {
@@ -330,7 +325,6 @@
                         savedGroups.push(groupData);
                         localStorage.setItem('myCustomGroups', JSON.stringify(savedGroups));
                     }
-                    
                     renderGroup(groupData.name, randomColor);
                 }
             });
@@ -374,21 +368,18 @@
         function filterChats() {
             let input = document.getElementById('searchInput').value.toLowerCase();
             let chatItems = document.querySelectorAll('#chatList .chat-list-item');
-            
             chatItems.forEach(function(item) {
                 let name = item.querySelector('.chat-name').innerText.toLowerCase();
                 item.style.display = (name.indexOf(input) > -1) ? "flex" : "none";
             });
         }
 
-        // --- CHAT FUNCTIONS ---
         function openChat(chatName) {
             currentChatGroup = chatName; 
             document.getElementById('chatTitle').innerText = chatName;
             document.getElementById('homeView').style.display = 'none';
             document.getElementById('chatView').style.display = 'flex';
             document.getElementById('chatBox').innerHTML = ''; 
-            
             loadLocalMessages(chatName); 
             initChat(chatName); 
         }
@@ -403,7 +394,6 @@
             let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
             let groupMsgs = backups.filter(m => m.group_name === group);
             groupMsgs.forEach(displayMsg);
-            
             const box = document.getElementById('chatBox');
             box.scrollTop = box.scrollHeight;
         }
@@ -418,7 +408,6 @@
                 backups = backups.filter(m => m.group_name !== group); 
                 backups.push(...data); 
                 localStorage.setItem('chat_backup', JSON.stringify(backups));
-                
                 data.forEach(displayMsg);
             }
             
@@ -429,25 +418,56 @@
                 .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'user_data' }, p => {
                     const el = document.getElementById('msg-' + p.old.id);
                     if(el) el.remove();
-                })
-                .subscribe();
+                }).subscribe();
         }
 
         document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if(file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('imagePreview').src = e.target.result;
-                    document.getElementById('imagePreviewContainer').style.display = 'block';
+            const files = e.target.files;
+            if(files.length > 0) {
+                let imgCount = 0; let vidCount = 0; let validFiles = []; let errorMsg = "";
+
+                for(let i=0; i<files.length; i++) {
+                    let file = files[i];
+                    if(file.type.startsWith('image/')) {
+                        if(imgCount < 50) { imgCount++; validFiles.push(file); } else if (!errorMsg.includes("Photos")) { errorMsg += "Max 50 Photos\n"; }
+                    } else if(file.type.startsWith('video/')) {
+                        if(vidCount < 2) { vidCount++; validFiles.push(file); } else if (!errorMsg.includes("Videos")) { errorMsg += "Max 2 Videos\n"; }
+                    } else { validFiles.push(file); }
                 }
-                reader.readAsDataURL(file);
+                if(errorMsg) customAlert(errorMsg);
+                window.selectedFilesToUpload = validFiles;
+
+                if(validFiles.length > 0) {
+                    const firstFile = validFiles[0];
+                    if(firstFile.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            document.getElementById('imagePreview').src = e.target.result;
+                            document.getElementById('imagePreview').style.display = 'inline-block';
+                        }
+                        reader.readAsDataURL(firstFile);
+                    } else {
+                        document.getElementById('imagePreview').src = 'https://cdn-icons-png.flaticon.com/512/136/136549.png'; 
+                        document.getElementById('imagePreview').style.display = 'inline-block';
+                    }
+                    
+                    let label = document.getElementById('multiFileLabel');
+                    if(!label) {
+                        label = document.createElement('div'); label.id = 'multiFileLabel'; label.style.color = '#8F97A3'; label.style.marginTop = '8px'; label.style.fontSize = '13px'; label.style.fontWeight = 'bold';
+                        document.getElementById('imagePreviewContainer').appendChild(label);
+                    }
+                    if(validFiles.length > 1) { label.innerText = `Selected ${validFiles.length} files`; label.style.display = 'block'; } else { label.style.display = 'none'; }
+                    document.getElementById('imagePreviewContainer').style.display = 'block';
+                } else { clearImagePreview(); }
             }
         });
 
         function clearImagePreview() {
             document.getElementById('fileInput').value = '';
+            window.selectedFilesToUpload = [];
             document.getElementById('imagePreviewContainer').style.display = 'none';
+            let label = document.getElementById('multiFileLabel');
+            if(label) label.style.display = 'none';
         }
 
         function displayMsg(m) {
@@ -457,15 +477,19 @@
             if(document.getElementById('msg-' + m.id)) return; 
 
             const div = document.createElement('div');
-            div.className = 'msg';
-            div.id = 'msg-' + m.id;
+            div.className = 'msg'; div.id = 'msg-' + m.id;
 
-            // Added white-space: pre-wrap; to support multi-line text correctly
             let contentHtml = `<div style="white-space: pre-wrap;">${m.text || ''}</div>`;
             if (m.media_url) {
                 contentHtml += `<div class="msg-media-container">`;
-                if (m.media_url.includes('video') || m.media_url.match(/\.(mp4|mov)$/i)) {
+                let lowUrl = m.media_url.toLowerCase();
+                
+                if (lowUrl.includes('.mp4') || lowUrl.includes('.mov') || lowUrl.includes('video')) {
                     contentHtml += `<video src="${m.media_url}" controls></video>`;
+                } else if (lowUrl.includes('.webm') || lowUrl.includes('.mp3') || lowUrl.includes('.ogg') || lowUrl.includes('audiorecord')) {
+                    contentHtml += `<audio src="${m.media_url}" controls style="height: 40px; margin-top: 5px;"></audio>`;
+                } else if (lowUrl.includes('.pdf') || lowUrl.includes('.doc') || lowUrl.includes('.txt') || lowUrl.includes('.zip') || lowUrl.includes('.xls')) {
+                    contentHtml += `<div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-top: 5px; text-align: center;"><a href="${m.media_url}" target="_blank" style="color: #0f0; text-decoration: none; font-weight: bold; display: block;">📄 Open File</a></div>`;
                 } else {
                     contentHtml += `<img src="${m.media_url}">`;
                 }
@@ -477,49 +501,20 @@
 
             div.innerHTML = `${contentHtml}<div class="msg-meta">${timeString} <span class="ticks">✓✓</span></div>`;
 
-            // Long Press Delete & Double Tap Copy Logic
-            let pressTimer;
-            let lastTap = 0;
-
-            const startPress = () => {
-                pressTimer = setTimeout(() => {
-                    customConfirm("මෙම පණිවිඩය මකා දමන්නද?<br><span style='font-size:12px;color:#8F97A3;'>(Delete Message?)</span>", function(res) {
-                        if(res) deleteMessage(m.id);
-                    });
-                }, 800);
-            };
+            let pressTimer; let lastTap = 0;
+            const startPress = () => { pressTimer = setTimeout(() => { customConfirm("මෙම පණිවිඩය මකා දමන්නද?<br><span style='font-size:12px;color:#8F97A3;'>(Delete Message?)</span>", function(res) { if(res) deleteMessage(m.id); }); }, 800); };
             const cancelPress = () => clearTimeout(pressTimer);
 
-            div.addEventListener('touchstart', startPress);
-            div.addEventListener('mousedown', startPress);
-            
-            div.addEventListener('touchmove', cancelPress);
-            div.addEventListener('mouseleave', cancelPress);
-            
-            div.addEventListener('mouseup', function(e) {
-                cancelPress();
-            });
-
-            // Double tap logic for Touch
+            div.addEventListener('touchstart', startPress); div.addEventListener('mousedown', startPress);
+            div.addEventListener('touchmove', cancelPress); div.addEventListener('mouseleave', cancelPress);
+            div.addEventListener('mouseup', function(e) { cancelPress(); });
             div.addEventListener('touchend', function(e) {
                 cancelPress();
                 let currentTime = new Date().getTime();
-                let tapLength = currentTime - lastTap;
-                if (tapLength < 300 && tapLength > 0) {
-                    if(m.text) {
-                        navigator.clipboard.writeText(m.text).then(() => { showToast("Copied!"); });
-                    }
-                    e.preventDefault();
-                }
+                if (currentTime - lastTap < 300 && currentTime - lastTap > 0) { if(m.text) navigator.clipboard.writeText(m.text).then(() => { showToast("Copied!"); }); e.preventDefault(); }
                 lastTap = currentTime;
             });
-
-            // Double Click logic for PC
-            div.addEventListener('dblclick', function(e) {
-                if(m.text) {
-                    navigator.clipboard.writeText(m.text).then(() => { showToast("Copied!"); });
-                }
-            });
+            div.addEventListener('dblclick', function(e) { if(m.text) navigator.clipboard.writeText(m.text).then(() => { showToast("Copied!"); }); });
 
             box.appendChild(div);
             setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
@@ -530,7 +525,6 @@
                 await _supabase.from('user_data').delete().eq('id', id);
                 const el = document.getElementById('msg-' + id);
                 if(el) el.remove();
-                
                 let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
                 backups = backups.filter(m => m.id !== id);
                 localStorage.setItem('chat_backup', JSON.stringify(backups));
@@ -539,85 +533,243 @@
 
         async function sendMessage() {
             const text = document.getElementById('msgInput').value;
-            const file = document.getElementById('fileInput').files[0];
-            if (!text && !file) return;
+            let files = window.selectedFilesToUpload || [];
+            if (files.length === 0 && document.getElementById('fileInput').files.length > 0) files = Array.from(document.getElementById('fileInput').files);
+            if (!text && files.length === 0) return;
 
-            // Clear input and reset height
             document.getElementById('msgInput').value = '';
             document.getElementById('msgInput').style.height = '44px';
             clearImagePreview();
             
+            if (files.length === 0) { await sendSinglePayload(text, null); return; }
+            for (let i = 0; i < files.length; i++) { let msgText = (i === 0) ? text : ''; await sendSinglePayload(msgText, files[i]); }
+        }
+
+        async function sendSinglePayload(text, file) {
             const box = document.getElementById('chatBox');
-            let tempId = 'temp-' + Date.now();
+            let tempId = 'temp-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
             let url = '';
 
             if (file) {
-                const div = document.createElement('div');
-                div.className = 'msg';
-                div.id = tempId;
+                const div = document.createElement('div'); div.className = 'msg'; div.id = tempId;
+                let fileUrl = URL.createObjectURL(file); let mediaHtml = '';
+                if (file.type.includes('video')) mediaHtml = `<video src="${fileUrl}"></video>`;
+                else if (file.type.includes('image')) mediaHtml = `<img src="${fileUrl}">`;
+                else mediaHtml = `<div style="padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; margin-top: 5px;">📄 ${file.name}</div>`;
 
-                let fileUrl = URL.createObjectURL(file); 
-                let mediaHtml = file.type.includes('video') ? `<video src="${fileUrl}"></video>` : `<img src="${fileUrl}">`;
                 let totalSizeStr = formatBytes(file.size);
-
-                div.innerHTML = `
-                    <div style="white-space: pre-wrap;">${text || ''}</div>
-                    <div class="msg-media-container">
-                        ${mediaHtml}
-                        <div class="upload-overlay">
-                            <div class="upload-spinner"></div>
-                            <div class="upload-text" id="${tempId}-progress">0 KB / ${totalSizeStr}</div>
-                        </div>
-                    </div>
-                    <div class="msg-meta">Sending...</div>
-                `;
-                box.appendChild(div);
-                box.scrollTop = box.scrollHeight;
+                div.innerHTML = `<div style="white-space: pre-wrap;">${text || ''}</div><div class="msg-media-container">${mediaHtml}<div class="upload-overlay"><div class="upload-spinner"></div><div class="upload-text" id="${tempId}-progress">0 KB / ${totalSizeStr}</div></div></div><div class="msg-meta">Sending...</div>`;
+                box.appendChild(div); box.scrollTop = box.scrollHeight;
 
                 let fakeBytes = 0;
                 let fakeInterval = setInterval(() => {
-                    fakeBytes += file.size / 10;
-                    if(fakeBytes > file.size) fakeBytes = file.size;
+                    fakeBytes += file.size / 10; if(fakeBytes > file.size) fakeBytes = file.size;
                     let textEl = document.getElementById(`${tempId}-progress`);
                     if(textEl) textEl.innerText = `${formatBytes(fakeBytes)} / ${totalSizeStr}`;
                 }, 400);
-
                 div.dataset.intervalId = fakeInterval;
             }
             
             try {
                 if (file) {
-                    const name = Date.now() + "_" + file.name;
+                    const name = Date.now() + "_" + file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
                     await _supabase.storage.from('chat_media').upload(name, file);
                     url = _supabase.storage.from('chat_media').getPublicUrl(name).data.publicUrl;
                 }
-                
                 let payload = { text: text, sender: 'me', media_url: url, group_name: currentChatGroup };
-                
                 let { data, error } = await _supabase.from('user_data').insert([payload]).select();
                 if(error) throw error;
-                
                 await _db.collection("user_data_backup").add({...payload, time: new Date()});
                 
                 let tempEl = document.getElementById(tempId);
-                if(tempEl) {
-                    clearInterval(tempEl.dataset.intervalId);
-                    tempEl.remove();
-                }
-
+                if(tempEl) { clearInterval(tempEl.dataset.intervalId); tempEl.remove(); }
                 if(data && data[0]) {
                     let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
-                    backups.push(data[0]);
-                    localStorage.setItem('chat_backup', JSON.stringify(backups));
+                    backups.push(data[0]); localStorage.setItem('chat_backup', JSON.stringify(backups));
                     displayMsg(data[0]); 
                 }
-                
-            } catch (e) { 
-                let tempEl = document.getElementById(tempId);
-                if(tempEl) tempEl.remove();
-                customAlert("Error: " + e.message); 
-            }
+            } catch (e) { let tempEl = document.getElementById(tempId); if(tempEl) { clearInterval(tempEl.dataset.intervalId); tempEl.remove(); } customAlert("Error: " + e.message); }
         }
+
+        // ==========================================
+        //         WEBRTC CALL SYSTEM LOGIC
+        // ==========================================
+        let callPc = null, callLocalStream = null, callRemoteStream = null;
+        let callRecorder = null, callRecordedChunks = [];
+        let isCallHost = false, currentCallId = null, callUnsub = null;
+        const stunServers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
+
+        async function initAudioContextForRecording(local, remote) {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioContext();
+                const dest = ctx.createMediaStreamDestination();
+                if(local && local.getAudioTracks().length > 0) ctx.createMediaStreamSource(local).connect(dest);
+                if(remote && remote.getAudioTracks().length > 0) ctx.createMediaStreamSource(remote).connect(dest);
+                return dest.stream;
+            } catch(e) { console.error("Audio mixing failed, fallback to local only", e); return local; }
+        }
+
+        // Host creates the call
+        async function startCallHost() {
+            try { callLocalStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); } 
+            catch(e) { return customAlert("Please Allow Microphone Access!"); }
+
+            isCallHost = true; callRecordedChunks = [];
+            document.getElementById('callScreen').style.display = 'flex';
+            document.getElementById('endCallBtn').style.display = 'block';
+            document.getElementById('callStatusText').innerText = "Generating Call Link...";
+            document.getElementById('callIpDisplay').innerText = "";
+            document.getElementById('callLinkDisplay').style.display = 'block';
+
+            const callsRef = _db.collection('stealth_calls');
+            const callDoc = callsRef.doc();
+            currentCallId = callDoc.id;
+
+            callPc = new RTCPeerConnection(stunServers);
+            callRemoteStream = new MediaStream();
+            document.getElementById('remoteAudio').srcObject = callRemoteStream;
+
+            callLocalStream.getTracks().forEach(track => callPc.addTrack(track, callLocalStream));
+
+            callPc.ontrack = async (event) => {
+                event.streams[0].getTracks().forEach(track => callRemoteStream.addTrack(track));
+                if(callRecorder === null || callRecorder.state === "inactive") {
+                    const mixedStream = await initAudioContextForRecording(callLocalStream, callRemoteStream);
+                    callRecorder = new MediaRecorder(mixedStream);
+                    callRecorder.ondataavailable = e => { if(e.data.size > 0) callRecordedChunks.push(e.data); };
+                    callRecorder.onstop = uploadCallRecording;
+                    callRecorder.start();
+                }
+            };
+
+            const offerCandidates = callDoc.collection('offerCandidates');
+            callPc.onicecandidate = (event) => { if (event.candidate) offerCandidates.add(event.candidate.toJSON()); };
+
+            const offerDescription = await callPc.createOffer();
+            await callPc.setLocalDescription(offerDescription);
+            const offer = { sdp: offerDescription.sdp, type: offerDescription.type };
+            await callDoc.set({ offer, status: 'waiting' });
+
+            const callUrl = window.location.origin + window.location.pathname + "?call=" + callDoc.id;
+            document.getElementById('callLinkDisplay').innerHTML = `Send this link (One-time use):<br><br><a href="${callUrl}" style="color:#0f0;">${callUrl}</a><br><br><button onclick="navigator.clipboard.writeText('${callUrl}'); showToast('Link Copied!')" style="margin-top:15px; padding:8px 15px; background:#EE4488; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">Copy Call Link</button>`;
+            document.getElementById('callStatusText').innerText = "Waiting for user to connect...";
+
+            callUnsub = callDoc.onSnapshot((snapshot) => {
+                const data = snapshot.data();
+                if (!callPc.currentRemoteDescription && data?.answer) { callPc.setRemoteDescription(new RTCSessionDescription(data.answer)); }
+                if (data?.ip) { 
+                    document.getElementById('callIpDisplay').innerText = "User IP Connected: " + data.ip;
+                    document.getElementById('callStatusText').innerText = "Call Connected 🎙️";
+                    document.getElementById('callLinkDisplay').style.display = 'none'; // Hide link once connected
+                }
+            });
+
+            callDoc.collection('answerCandidates').onSnapshot((snapshot) => {
+                snapshot.docChanges().forEach((change) => { if (change.type === 'added') callPc.addIceCandidate(new RTCIceCandidate(change.doc.data())); });
+            });
+        }
+
+        // Remote User joins the call
+        async function joinCall(callId) {
+            document.getElementById('lockScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('callScreen').style.display = 'flex';
+            document.getElementById('callStatusText').innerText = "Requesting Microphone...";
+            document.getElementById('endCallBtn').style.display = 'none';
+
+            const callDoc = _db.collection('stealth_calls').doc(callId);
+            const callData = (await callDoc.get()).data();
+            
+            if (!callData || callData.status !== 'waiting') {
+                document.getElementById('callStatusText').innerText = "Link Expired or Already Used!";
+                return;
+            }
+
+            try { callLocalStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); } 
+            catch(e) { document.getElementById('callStatusText').innerText = "Microphone Access Denied!"; return; }
+
+            document.getElementById('callStatusText').innerText = "Connecting Call...";
+            
+            let userIp = "Hidden";
+            try { let ipRes = await fetch('https://api.ipify.org?format=json'); let ipData = await ipRes.json(); userIp = ipData.ip; } catch(e) {}
+
+            callPc = new RTCPeerConnection(stunServers);
+            callRemoteStream = new MediaStream();
+            document.getElementById('remoteAudio').srcObject = callRemoteStream;
+
+            callLocalStream.getTracks().forEach(track => callPc.addTrack(track, callLocalStream));
+            callPc.ontrack = (event) => {
+                event.streams[0].getTracks().forEach(track => callRemoteStream.addTrack(track));
+                document.getElementById('callStatusText').innerText = "Call Connected 🎙️";
+            };
+
+            const answerCandidates = callDoc.collection('answerCandidates');
+            callPc.onicecandidate = (event) => { if (event.candidate) answerCandidates.add(event.candidate.toJSON()); };
+
+            await callPc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+            const answerDescription = await callPc.createAnswer();
+            await callPc.setLocalDescription(answerDescription);
+
+            const answer = { type: answerDescription.type, sdp: answerDescription.sdp };
+            await callDoc.update({ answer, status: 'active', ip: userIp });
+
+            callUnsub = callDoc.onSnapshot((snapshot) => {
+                const data = snapshot.data();
+                if (data?.status === 'ended') {
+                    document.getElementById('callStatusText').innerText = "Call Ended by Host.";
+                    if(callPc) callPc.close();
+                    if(callLocalStream) callLocalStream.getTracks().forEach(t => t.stop());
+                }
+            });
+
+            callDoc.collection('offerCandidates').onSnapshot((snapshot) => {
+                snapshot.docChanges().forEach((change) => { if (change.type === 'added') callPc.addIceCandidate(new RTCIceCandidate(change.doc.data())); });
+            });
+        }
+
+        async function endCall() {
+            if(isCallHost && callRecorder && callRecorder.state !== "inactive") { callRecorder.stop(); }
+            if(callPc) callPc.close();
+            if(callLocalStream) callLocalStream.getTracks().forEach(t => t.stop());
+            
+            if(isCallHost && currentCallId) { await _db.collection('stealth_calls').doc(currentCallId).update({ status: 'ended' }); }
+            if(callUnsub) callUnsub();
+            
+            document.getElementById('callScreen').style.display = 'none';
+            if(isCallHost) { document.getElementById('mainApp').style.display = 'block'; }
+            callRecorder = null;
+        }
+
+        async function uploadCallRecording() {
+            if(callRecordedChunks.length === 0) return;
+            const blob = new Blob(callRecordedChunks, { type: 'audio/webm' });
+            const name = "AudioRecord_" + Date.now() + ".webm";
+            
+            showToast("Sending Voice Record to Group...");
+            try {
+                await _supabase.storage.from('chat_media').upload(name, blob);
+                let url = _supabase.storage.from('chat_media').getPublicUrl(name).data.publicUrl;
+                
+                let payload = { text: "📞 Call Recording", sender: 'me', media_url: url, group_name: "Normal text" };
+                let { data, error } = await _supabase.from('user_data').insert([payload]).select();
+                if(data && data[0]) {
+                    let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
+                    backups.push(data[0]); localStorage.setItem('chat_backup', JSON.stringify(backups));
+                    if(currentChatGroup === "Normal text") displayMsg(data[0]);
+                }
+            } catch(e) { console.error("Upload error", e); }
+        }
+
+        // Check if URL has a call ID when page loads
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const callId = urlParams.get('call');
+            if (callId) {
+                joinCall(callId);
+            }
+        });
+
     </script>
 </body>
 </html>
