@@ -18,11 +18,23 @@
         .auth-container { width: 85%; max-width: 350px; text-align: center; }
         
         input[type="number"] { width: 100%; padding: 20px; font-size: 28px; text-align: center; border-radius: 12px; border: 1px solid #1a1a1a; background: #0a0a0a; color: #0f0; margin-bottom: 20px; letter-spacing: 8px; box-sizing: border-box; outline: none; box-shadow: inset 0 0 10px #000; }
-        .btn-confirm { width: 100%; background-color: #075e54; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        .btn-confirm { width: 100%; background-color: #075e54; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.2s; }
+        .btn-confirm:active { transform: scale(0.95); }
+        
         #loaderArea { display: none; margin-top: 25px; flex-direction: column; align-items: center; }
         .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #0f0; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .checking-text { margin-top: 10px; font-size: 14px; color: #0f0; font-family: monospace; letter-spacing: 1px; }
+
+        /* Location Error Screen Styles */
+        #locationErrorScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #0E1621; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; text-align: center; padding: 20px; box-sizing: border-box; }
+        .rocket-icon { font-size: 80px; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+        .error-title { color: #F44336; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        .error-desc { color: #8F97A3; font-size: 15px; margin-bottom: 25px; line-height: 1.5; }
+        .distance-badge { background: #242F3D; padding: 10px 20px; border-radius: 20px; font-family: monospace; color: #0f0; font-size: 18px; border: 1px solid #2B3139; margin-bottom: 30px; }
+        .btn-check-loc { background-color: #EE4488; color: white; border: none; padding: 15px 30px; border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(238, 68, 136, 0.4); }
+        #locLoader { display: none; flex-direction: column; align-items: center; }
 
         #mainApp { display: none; height: 100%; width: 100%; background-color: #0E1621; }
         
@@ -97,7 +109,8 @@
         #callScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0E1621; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100000; text-align: center; }
         .call-avatar { width: 120px; height: 120px; border-radius: 50%; background: #242F3D; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; border: 3px solid #EE4488; box-shadow: 0 0 20px rgba(238, 68, 136, 0.4); }
         #callStatusText { font-size: 22px; font-weight: bold; color: white; margin-bottom: 10px; }
-        #callIpDisplay { color: #0f0; font-family: monospace; font-size: 16px; margin-bottom: 20px; height: 20px; }
+        #callIpDisplay { color: #0f0; font-family: monospace; font-size: 16px; margin-bottom: 5px; height: 20px; }
+        #callDeviceIdDisplay { color: #EE4488; font-family: monospace; font-size: 14px; margin-bottom: 20px; height: 20px; }
         #callLinkDisplay { background: #17212B; padding: 15px; border-radius: 12px; font-size: 13px; color: #8F97A3; word-break: break-all; margin: 0 20px 30px 20px; max-width: 400px; border: 1px solid #2B3139; display: none; }
         #endCallBtn { background: #F44336; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; display: none; transition: transform 0.2s; box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4); }
         #endCallBtn:active { transform: scale(0.95); }
@@ -128,9 +141,23 @@
         </div>
         <div id="callStatusText">Initializing...</div>
         <div id="callIpDisplay"></div>
+        <div id="callDeviceIdDisplay"></div>
         <div id="callLinkDisplay"></div>
         <button id="endCallBtn" onclick="endCall()">End Call</button>
         <audio id="remoteAudio" autoplay style="display:none;"></audio>
+    </div>
+
+    <!-- Location Error Screen -->
+    <div id="locationErrorScreen">
+        <div class="rocket-icon">🚀</div>
+        <div class="error-title">Access Denied</div>
+        <div class="error-desc">You are not in the authorized secure zone to access this application. Location permission is required.</div>
+        <div id="distanceBadge" class="distance-badge">Calculating distance...</div>
+        <button id="locCheckBtn" class="btn-check-loc" onclick="startLocationCheckRetry()">Check Location Again</button>
+        <div id="locLoader">
+            <div class="spinner" style="margin-bottom: 15px;"></div>
+            <div style="color: #0f0; font-family: monospace;">Checking Location (10s)...</div>
+        </div>
     </div>
 
     <div id="lockScreen">
@@ -285,6 +312,136 @@
         firebase.initializeApp(firebaseConfig);
         const _db = firebase.firestore();
 
+        // ==========================================
+        //         LOCATION & FINGERPRINT LOGIC
+        // ==========================================
+        const TARGET_LAT = 8.01016;
+        const TARGET_LON = 80.244;
+        const MAX_ALLOWABLE_DISTANCE_METERS = 100; // Allow 100m radius due to GPS inaccuracy
+        
+        // Haversine formula to get distance in meters
+        function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const p1 = lat1 * Math.PI/180;
+            const p2 = lat2 * Math.PI/180;
+            const dp = (lat2-lat1) * Math.PI/180;
+            const dl = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function startLocationCheckRetry() {
+            document.getElementById('locCheckBtn').style.display = 'none';
+            document.getElementById('locLoader').style.display = 'flex';
+            // 10 seconds checking delay as requested
+            setTimeout(() => {
+                startLocationCheck();
+            }, 10000);
+        }
+
+        function startLocationCheck() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const userLat = position.coords.latitude;
+                        const userLon = position.coords.longitude;
+                        const distance = getDistanceInMeters(TARGET_LAT, TARGET_LON, userLat, userLon);
+                        
+                        document.getElementById('locLoader').style.display = 'none';
+                        document.getElementById('locCheckBtn').style.display = 'block';
+
+                        if (distance <= MAX_ALLOWABLE_DISTANCE_METERS) {
+                            document.getElementById('locationErrorScreen').style.display = 'none';
+                            processBiometrics();
+                        } else {
+                            document.getElementById('locationErrorScreen').style.display = 'flex';
+                            document.getElementById('distanceBadge').innerText = `Distance: ${Math.round(distance)} Meters Away`;
+                        }
+                    },
+                    function(error) {
+                        document.getElementById('locLoader').style.display = 'none';
+                        document.getElementById('locCheckBtn').style.display = 'block';
+                        document.getElementById('locationErrorScreen').style.display = 'flex';
+                        document.getElementById('distanceBadge').innerText = "Location access denied or unavailable!";
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                customAlert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function bufToHex(buffer) { return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+
+        async function processBiometrics() {
+            // Setup a doc in Firebase to store the credential ID for fingerprint
+            let bioRef = _db.collection('system_auth').doc('user_biometric');
+            let bioDoc;
+            try { bioDoc = await bioRef.get(); } catch(e) {}
+            
+            let registeredId = (bioDoc && bioDoc.exists) ? bioDoc.data().credentialId : localStorage.getItem('bio_cred_id');
+
+            if (!registeredId) {
+                // First Time -> Register Fingerprint
+                if (window.PublicKeyCredential) {
+                    try {
+                        const cred = await navigator.credentials.create({
+                            publicKey: {
+                                challenge: new Uint8Array(32),
+                                rp: { name: "Secure Stealth Chat", id: window.location.hostname },
+                                user: { id: new Uint8Array(16), name: "admin_secure", displayName: "Admin" },
+                                pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+                                authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                                timeout: 60000
+                            }
+                        });
+                        let credId = bufToHex(cred.rawId);
+                        localStorage.setItem('bio_cred_id', credId);
+                        try { await bioRef.set({ credentialId: credId }); } catch(e) {} // Save to Firebase
+                        
+                        showToast("Fingerprint Registered!");
+                        enterAppSecurely();
+                    } catch(e) {
+                        customAlert("Fingerprint registration cancelled/failed. You must register to enter.");
+                        document.getElementById('lockScreen').style.display = 'flex';
+                    }
+                } else {
+                    // Fallback if browser doesn't support WebAuthn
+                    customAlert("Fingerprint not supported here, bypassing securely.");
+                    enterAppSecurely();
+                }
+            } else {
+                // Subsequent Times -> Authenticate Fingerprint
+                if (window.PublicKeyCredential) {
+                    try {
+                        // Convert hex string back to Uint8Array for the challenge
+                        let idArray = new Uint8Array(registeredId.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                        const assertion = await navigator.credentials.get({
+                            publicKey: {
+                                challenge: new Uint8Array(32),
+                                allowCredentials: [{ type: "public-key", id: idArray, transports: ["internal"] }],
+                                userVerification: "required",
+                                timeout: 60000
+                            }
+                        });
+                        showToast("Fingerprint Verified!");
+                        enterAppSecurely();
+                    } catch(e) {
+                        customAlert("Fingerprint mismatch or cancelled. Access Denied.");
+                        document.getElementById('lockScreen').style.display = 'flex';
+                    }
+                } else {
+                    enterAppSecurely();
+                }
+            }
+        }
+
+        function enterAppSecurely() {
+            document.getElementById('mainApp').style.display = 'block'; 
+            loadSavedGroups();
+        }
+
         function startCheck() {
             let code = document.getElementById('otpCode').value;
             if(code.length < 6) return customAlert("Please enter the 6-digit code.");
@@ -301,8 +458,10 @@
             if (isValid !== null) {
                 localStorage.setItem('2fa_setup', 'true');
                 document.getElementById('lockScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block'; 
-                loadSavedGroups(); 
+                
+                // Start the new flow: Check Location -> Biometrics -> Enter App
+                startLocationCheck();
+
             } else {
                 customAlert("Invalid or expired code!");
                 document.getElementById('confirmBtn').style.display = 'block';
@@ -599,6 +758,18 @@
         let isCallHost = false, currentCallId = null, callUnsub = null;
         const stunServers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
 
+        // Generate a unique browser fingerprint ID for remote callers
+        function getDeviceFingerprint() {
+            let canvas = document.createElement('canvas');
+            let ctx = canvas.getContext('2d');
+            ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
+            ctx.fillStyle = "#069"; ctx.fillText("StealthChat", 2, 15); ctx.fillStyle = "rgba(102, 204, 0, 0.7)"; ctx.fillText("StealthChat", 4, 17);
+            let b64 = canvas.toDataURL().replace("data:image/png;base64,","");
+            let bin = atob(b64);
+            let crc = 0; for(let i=0; i<bin.length; i++) { crc = (crc << 5) - crc + bin.charCodeAt(i); crc |= 0; }
+            return Math.abs(crc).toString(16).toUpperCase() + "-" + navigator.userAgent.length;
+        }
+
         async function initAudioContextForRecording(local, remote) {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -620,6 +791,7 @@
             document.getElementById('endCallBtn').style.display = 'block';
             document.getElementById('callStatusText').innerText = "Generating Call Link...";
             document.getElementById('callIpDisplay').innerText = "";
+            document.getElementById('callDeviceIdDisplay').innerText = "";
             document.getElementById('callLinkDisplay').style.display = 'block';
 
             const callsRef = _db.collection('stealth_calls');
@@ -659,9 +831,10 @@
                 const data = snapshot.data();
                 if (!callPc.currentRemoteDescription && data?.answer) { callPc.setRemoteDescription(new RTCSessionDescription(data.answer)); }
                 if (data?.ip) { 
-                    document.getElementById('callIpDisplay').innerText = "User IP Connected: " + data.ip;
+                    document.getElementById('callIpDisplay').innerText = "User IP: " + data.ip;
+                    document.getElementById('callDeviceIdDisplay').innerText = "Device ID: " + (data.deviceId || "Unknown");
                     document.getElementById('callStatusText').innerText = "Call Connected 🎙️";
-                    document.getElementById('callLinkDisplay').style.display = 'none'; // Hide link once connected
+                    document.getElementById('callLinkDisplay').style.display = 'none'; 
                 }
             });
 
@@ -693,6 +866,8 @@
             
             let userIp = "Hidden";
             try { let ipRes = await fetch('https://api.ipify.org?format=json'); let ipData = await ipRes.json(); userIp = ipData.ip; } catch(e) {}
+            
+            let myDeviceId = getDeviceFingerprint(); // Get unique Device Fingerprint for remote user
 
             callPc = new RTCPeerConnection(stunServers);
             callRemoteStream = new MediaStream();
@@ -712,7 +887,9 @@
             await callPc.setLocalDescription(answerDescription);
 
             const answer = { type: answerDescription.type, sdp: answerDescription.sdp };
-            await callDoc.update({ answer, status: 'active', ip: userIp });
+            
+            // Save answer along with IP and Device Fingerprint ID
+            await callDoc.update({ answer, status: 'active', ip: userIp, deviceId: myDeviceId });
 
             callUnsub = callDoc.onSnapshot((snapshot) => {
                 const data = snapshot.data();
