@@ -48,7 +48,7 @@
         #searchInput { background: transparent; border: none; color: white; outline: none; width: 100%; font-size: 15px; margin-left: 8px; }
         #searchInput::placeholder { color: #8F97A3; }
         
-        .chat-list { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        .chat-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
         .chat-list-item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; transition: background 0.2s; }
         .chat-list-item:active { background: #2B3139; }
         .chat-avatar { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; margin-right: 15px; color: white; background: #E91E63; flex-shrink: 0; }
@@ -64,7 +64,7 @@
         #status { display: none; }
         
         #chatBox { 
-            flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px; display: flex; flex-direction: column; gap: 10px; 
+            flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 15px; display: flex; flex-direction: column; gap: 10px; 
             background-color: #0F0F0F; 
             background-image: url('https://i.postimg.cc/s1ds1wcn/IMG-20260511-145844-699.jpg'); 
             background-size: cover; 
@@ -73,7 +73,7 @@
             scroll-behavior: smooth;
         }
         
-        .msg { max-width: 75%; padding: 8px 12px 4px 12px; border-radius: 12px 12px 0 12px; background: #ab4e68; align-self: flex-end; font-size: 15px; word-wrap: break-word; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.3); display: flex; flex-direction: column; user-select: none; }
+        .msg { max-width: 75%; padding: 8px 12px 4px 12px; border-radius: 12px 12px 0 12px; background: #ab4e68; align-self: flex-end; font-size: 15px; word-wrap: break-word; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.3); display: flex; flex-direction: column; user-select: none; cursor: pointer; transition: outline 0.2s; }
         .msg-media-container { position: relative; display: block; margin-top: 5px; border-radius: 8px; overflow: hidden; }
         .msg-media-container img, .msg-media-container video, .msg-media-container audio { width: 100%; max-width: 100%; display: block; border-radius: 8px; }
         
@@ -117,6 +117,22 @@
         
         .pulse { animation: pulse-animation 1.5s infinite; }
         @keyframes pulse-animation { 0% { box-shadow: 0 0 0 0px rgba(238, 68, 136, 0.5); } 100% { box-shadow: 0 0 0 30px rgba(238, 68, 136, 0); } }
+
+        /* Sleek WhatsApp Style Context Menu */
+        .context-menu-box { animation: popupScale 0.15s ease-out; background: #1F2C34 !important; border: 1px solid #2B3139; }
+        @keyframes popupScale { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .context-item { display: flex; align-items: center; padding: 14px 20px; color: white; font-size: 16px; cursor: pointer; gap: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .context-item:last-child { border-bottom: none; }
+        .context-item:active { background: #2A3942; }
+        .context-item svg { width: 22px; height: 22px; fill: #8F97A3; }
+
+        /* Pinned Area Styles */
+        .pinned-bar-item { background: #182533; margin: 5px 15px 2px 15px; border-radius: 10px; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #EE4488; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+        .pinned-bar-content { flex: 1; cursor: pointer; min-width: 0; }
+        .pinned-bar-title { color: #EE4488; font-weight: bold; font-size: 12px; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .pinned-bar-desc { color: #B3B3B3; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pinned-bar-close { color: #8F97A3; font-size: 16px; cursor: pointer; padding: 4px 8px; transition: color 0.2s; }
+        .pinned-bar-close:hover { color: white; }
     </style>
 </head>
 <body>
@@ -134,7 +150,12 @@
     
     <div id="toast">Copied!</div>
 
-    <!-- Call System Screen -->
+    <div id="msgContextMenu" class="modal-overlay" style="background: rgba(0,0,0,0.4); z-index: 10002;">
+        <div class="modal-box context-menu-box" style="width: 80%; max-width: 260px; padding: 5px 0; border-radius: 14px; text-align: left;">
+            <div id="contextMenuItems"></div>
+        </div>
+    </div>
+
     <div id="callScreen">
         <div class="call-avatar pulse">
             <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="#EE4488" viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.03 21c.78 0 1.05-.62 1.05-1.15v-3.48c0-.54-.45-.99-.99-.99z"/></svg>
@@ -147,7 +168,6 @@
         <audio id="remoteAudio" autoplay style="display:none;"></audio>
     </div>
 
-    <!-- Location Error Screen -->
     <div id="locationErrorScreen">
         <div class="rocket-icon">🚀</div>
         <div class="error-title">Access Denied</div>
@@ -218,6 +238,9 @@
             </div>
             
             <div id="status">Connecting...</div>
+
+            <div id="pinnedHeaderContainer" style="display: none; flex-direction: column; background: #0E1621; padding-bottom: 5px;"></div>
+
             <div id="chatBox"></div>
             
             <div class="input-wrapper">
@@ -244,10 +267,10 @@
 
     <script>
         document.addEventListener('touchmove', function(event) {
-            if (event.scale !== 1 && !event.target.closest('#chatBox')) { event.preventDefault(); }
+            if (event.scale !== 1 && !event.target.closest('#chatBox') && !event.target.closest('#chatList')) { event.preventDefault(); }
         }, { passive: false });
         document.addEventListener('gesturestart', function(e) { 
-            if(!e.target.closest('#chatBox')) e.preventDefault(); 
+            if(!e.target.closest('#chatBox') && !e.target.closest('#chatList')) e.preventDefault(); 
         });
 
         const msgInput = document.getElementById('msgInput');
@@ -317,9 +340,8 @@
         // ==========================================
         const TARGET_LAT = 8.01016;
         const TARGET_LON = 80.244;
-        const MAX_ALLOWABLE_DISTANCE_METERS = 100; // Allow 100m radius due to GPS inaccuracy
+        const MAX_ALLOWABLE_DISTANCE_METERS = 1000; // Updated to 1000m radius fence area
         
-        // Haversine formula to get distance in meters
         function getDistanceInMeters(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
             const p1 = lat1 * Math.PI/180;
@@ -334,7 +356,6 @@
         function startLocationCheckRetry() {
             document.getElementById('locCheckBtn').style.display = 'none';
             document.getElementById('locLoader').style.display = 'flex';
-            // 10 seconds checking delay as requested
             setTimeout(() => {
                 startLocationCheck();
             }, 10000);
@@ -375,7 +396,6 @@
         function bufToHex(buffer) { return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''); }
 
         async function processBiometrics() {
-            // Setup a doc in Firebase to store the credential ID for fingerprint
             let bioRef = _db.collection('system_auth').doc('user_biometric');
             let bioDoc;
             try { bioDoc = await bioRef.get(); } catch(e) {}
@@ -383,7 +403,6 @@
             let registeredId = (bioDoc && bioDoc.exists) ? bioDoc.data().credentialId : localStorage.getItem('bio_cred_id');
 
             if (!registeredId) {
-                // First Time -> Register Fingerprint
                 if (window.PublicKeyCredential) {
                     try {
                         const cred = await navigator.credentials.create({
@@ -398,7 +417,7 @@
                         });
                         let credId = bufToHex(cred.rawId);
                         localStorage.setItem('bio_cred_id', credId);
-                        try { await bioRef.set({ credentialId: credId }); } catch(e) {} // Save to Firebase
+                        try { await bioRef.set({ credentialId: credId }); } catch(e) {}
                         
                         showToast("Fingerprint Registered!");
                         enterAppSecurely();
@@ -407,15 +426,12 @@
                         document.getElementById('lockScreen').style.display = 'flex';
                     }
                 } else {
-                    // Fallback if browser doesn't support WebAuthn
                     customAlert("Fingerprint not supported here, bypassing securely.");
                     enterAppSecurely();
                 }
             } else {
-                // Subsequent Times -> Authenticate Fingerprint
                 if (window.PublicKeyCredential) {
                     try {
-                        // Convert hex string back to Uint8Array for the challenge
                         let idArray = new Uint8Array(registeredId.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
                         const assertion = await navigator.credentials.get({
                             publicKey: {
@@ -458,10 +474,7 @@
             if (isValid !== null) {
                 localStorage.setItem('2fa_setup', 'true');
                 document.getElementById('lockScreen').style.display = 'none';
-                
-                // Start the new flow: Check Location -> Biometrics -> Enter App
                 startLocationCheck();
-
             } else {
                 customAlert("Invalid or expired code!");
                 document.getElementById('confirmBtn').style.display = 'block';
@@ -539,6 +552,7 @@
             document.getElementById('homeView').style.display = 'none';
             document.getElementById('chatView').style.display = 'flex';
             document.getElementById('chatBox').innerHTML = ''; 
+            renderPinnedHeader();
             loadLocalMessages(chatName); 
             initChat(chatName); 
         }
@@ -629,6 +643,173 @@
             if(label) label.style.display = 'none';
         }
 
+        // Dismiss context menu overlay on backdrop click
+        document.getElementById('msgContextMenu').onclick = function(e) {
+            if (e.target === this) this.style.display = 'none';
+        };
+
+        function openMessageContextMenu(m) {
+            const menuOverlay = document.getElementById('msgContextMenu');
+            const itemsContainer = document.getElementById('contextMenuItems');
+            itemsContainer.innerHTML = ''; 
+
+            let key = 'stealth_pinned_' + currentChatGroup;
+            let pins = JSON.parse(localStorage.getItem(key) || '[]');
+            let isPinned = pins.some(p => p.id === m.id);
+            let isMedia = !!m.media_url;
+
+            if (!isMedia) {
+                // Normal Text Message -> Only Copy & Pin/Unpin
+                let copyOpt = document.createElement('div');
+                copyOpt.className = 'context-item';
+                copyOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copy`;
+                copyOpt.onclick = () => {
+                    navigator.clipboard.writeText(m.text || '').then(() => showToast("Copied!"));
+                    menuOverlay.style.display = 'none';
+                };
+                itemsContainer.appendChild(copyOpt);
+            } else {
+                // Media Content (Photo, Video, Voice) -> Only Save to Gallery & Pin/Unpin
+                let saveOpt = document.createElement('div');
+                saveOpt.className = 'context-item';
+                saveOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg> Save to Gallery`;
+                saveOpt.onclick = () => {
+                    saveToGallery(m.media_url);
+                    menuOverlay.style.display = 'none';
+                };
+                itemsContainer.appendChild(saveOpt);
+            }
+
+            // Pin / Unpin Option Toggle Rule
+            let pinOpt = document.createElement('div');
+            pinOpt.className = 'context-item';
+            if (isPinned) {
+                pinOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg> Unpin`;
+                pinOpt.onclick = () => {
+                    unpinMessage(m.id);
+                    menuOverlay.style.display = 'none';
+                };
+            } else {
+                pinOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg> Pin`;
+                pinOpt.onclick = () => {
+                    pinMessage(m);
+                    menuOverlay.style.display = 'none';
+                };
+            }
+            itemsContainer.appendChild(pinOpt);
+
+            // Sleek Delete Option
+            let delOpt = document.createElement('div');
+            delOpt.className = 'context-item';
+            delOpt.style.color = '#F44336';
+            delOpt.innerHTML = `<svg viewBox="0 0 24 24" style="fill:#F44336;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> Delete`;
+            delOpt.onclick = () => {
+                customConfirm("මෙම පණිවිඩය මකා දමන්නද?<br><span style='font-size:12px;color:#8F97A3;'>(Delete Message?)</span>", function(res) {
+                    if(res) deleteMessage(m.id);
+                });
+                menuOverlay.style.display = 'none';
+            };
+            itemsContainer.appendChild(delOpt);
+
+            menuOverlay.style.display = 'flex';
+        }
+
+        function pinMessage(m) {
+            let key = 'stealth_pinned_' + currentChatGroup;
+            let pins = JSON.parse(localStorage.getItem(key) || '[]');
+            
+            if (pins.length >= 3) {
+                return customAlert("උපරිම පින් කළ හැක්කේ පණිවිඩ 3ක් පමණි!<br><span style='font-size:13px;color:#8F97A3;'>(Maximum 3 pinned messages allowed per group)</span>");
+            }
+
+            let desc = m.text || '';
+            if (!desc && m.media_url) {
+                let lowUrl = m.media_url.toLowerCase();
+                if (lowUrl.includes('.mp4') || lowUrl.includes('.mov') || lowUrl.includes('video')) desc = "📹 Video";
+                else if (lowUrl.includes('.webm') || lowUrl.includes('.mp3') || lowUrl.includes('.ogg') || lowUrl.includes('audiorecord')) desc = "🎵 Voice Record";
+                else if (lowUrl.includes('.pdf') || lowUrl.includes('.doc') || lowUrl.includes('.txt') || lowUrl.includes('.zip')) desc = "📄 Document";
+                else desc = "📷 Photo";
+            }
+
+            pins.push({ id: m.id, desc: desc });
+            localStorage.setItem(key, JSON.stringify(pins));
+            renderPinnedHeader();
+            showToast("Message Pinned!");
+        }
+
+        function unpinMessage(id) {
+            let key = 'stealth_pinned_' + currentChatGroup;
+            let pins = JSON.parse(localStorage.getItem(key) || '[]');
+            pins = pins.filter(p => p.id !== id);
+            localStorage.setItem(key, JSON.stringify(pins));
+            renderPinnedHeader();
+            showToast("Message Unpinned!");
+        }
+
+        function renderPinnedHeader() {
+            const container = document.getElementById('pinnedHeaderContainer');
+            container.innerHTML = '';
+            
+            let key = 'stealth_pinned_' + currentChatGroup;
+            let pins = JSON.parse(localStorage.getItem(key) || '[]');
+            
+            if (pins.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'flex';
+            pins.forEach(pin => {
+                let bar = document.createElement('div');
+                bar.className = 'pinned-bar-item';
+                bar.innerHTML = `
+                    <div class="pinned-bar-content" onclick="scrollToMessage('${pin.id}')">
+                        <div class="pinned-bar-title">Pinned Message</div>
+                        <div class="pinned-bar-desc">${pin.desc}</div>
+                    </div>
+                    <div class="pinned-bar-close" onclick="unpinMessage('${pin.id}'); event.stopPropagation();">✕</div>
+                `;
+                container.appendChild(bar);
+            });
+        }
+
+        function scrollToMessage(id) {
+            const el = document.getElementById('msg-' + id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.outline = '2px solid #EE4488';
+                setTimeout(() => { el.style.outline = 'none'; }, 2000);
+            } else {
+                showToast("Message not found in context view!");
+            }
+        }
+
+        function saveToGallery(mediaUrl) {
+            showToast("Downloading file...");
+            fetch(mediaUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    let filename = mediaUrl.substring(mediaUrl.lastIndexOf('/') + 1);
+                    if(!filename || filename.indexOf('?') > -1) {
+                        filename = "StealthMedia_" + Date.now();
+                    }
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showToast("Saved to Gallery!");
+                })
+                .catch(err => {
+                    console.error("Download fallback mode activated", err);
+                    window.open(mediaUrl, '_blank');
+                });
+        }
+
         function displayMsg(m) {
             if(m.group_name && m.group_name !== currentChatGroup) return; 
 
@@ -660,20 +841,11 @@
 
             div.innerHTML = `${contentHtml}<div class="msg-meta">${timeString} <span class="ticks">✓✓</span></div>`;
 
-            let pressTimer; let lastTap = 0;
-            const startPress = () => { pressTimer = setTimeout(() => { customConfirm("මෙම පණිවිඩය මකා දමන්නද?<br><span style='font-size:12px;color:#8F97A3;'>(Delete Message?)</span>", function(res) { if(res) deleteMessage(m.id); }); }, 800); };
-            const cancelPress = () => clearTimeout(pressTimer);
-
-            div.addEventListener('touchstart', startPress); div.addEventListener('mousedown', startPress);
-            div.addEventListener('touchmove', cancelPress); div.addEventListener('mouseleave', cancelPress);
-            div.addEventListener('mouseup', function(e) { cancelPress(); });
-            div.addEventListener('touchend', function(e) {
-                cancelPress();
-                let currentTime = new Date().getTime();
-                if (currentTime - lastTap < 300 && currentTime - lastTap > 0) { if(m.text) navigator.clipboard.writeText(m.text).then(() => { showToast("Copied!"); }); e.preventDefault(); }
-                lastTap = currentTime;
+            // WhatsApp single tap structure to bring up dynamic options panel cleanly
+            div.addEventListener('click', function(e) {
+                if (e.target.tagName === 'VIDEO' || e.target.tagName === 'AUDIO' || e.target.tagName === 'A') return;
+                openMessageContextMenu(m);
             });
-            div.addEventListener('dblclick', function(e) { if(m.text) navigator.clipboard.writeText(m.text).then(() => { showToast("Copied!"); }); });
 
             box.appendChild(div);
             setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
@@ -684,6 +856,7 @@
                 await _supabase.from('user_data').delete().eq('id', id);
                 const el = document.getElementById('msg-' + id);
                 if(el) el.remove();
+                unpinMessage(id); // auto cleanup pins upon database removal
                 let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
                 backups = backups.filter(m => m.id !== id);
                 localStorage.setItem('chat_backup', JSON.stringify(backups));
@@ -758,7 +931,6 @@
         let isCallHost = false, currentCallId = null, callUnsub = null;
         const stunServers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
 
-        // Generate a unique browser fingerprint ID for remote callers
         function getDeviceFingerprint() {
             let canvas = document.createElement('canvas');
             let ctx = canvas.getContext('2d');
@@ -781,7 +953,6 @@
             } catch(e) { console.error("Audio mixing failed, fallback to local only", e); return local; }
         }
 
-        // Host creates the call
         async function startCallHost() {
             try { callLocalStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); } 
             catch(e) { return customAlert("Please Allow Microphone Access!"); }
@@ -843,7 +1014,6 @@
             });
         }
 
-        // Remote User joins the call
         async function joinCall(callId) {
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('mainApp').style.display = 'none';
@@ -867,7 +1037,7 @@
             let userIp = "Hidden";
             try { let ipRes = await fetch('https://api.ipify.org?format=json'); let ipData = await ipRes.json(); userIp = ipData.ip; } catch(e) {}
             
-            let myDeviceId = getDeviceFingerprint(); // Get unique Device Fingerprint for remote user
+            let myDeviceId = getDeviceFingerprint();
 
             callPc = new RTCPeerConnection(stunServers);
             callRemoteStream = new MediaStream();
@@ -887,8 +1057,6 @@
             await callPc.setLocalDescription(answerDescription);
 
             const answer = { type: answerDescription.type, sdp: answerDescription.sdp };
-            
-            // Save answer along with IP and Device Fingerprint ID
             await callDoc.update({ answer, status: 'active', ip: userIp, deviceId: myDeviceId });
 
             callUnsub = callDoc.onSnapshot((snapshot) => {
@@ -938,7 +1106,6 @@
             } catch(e) { console.error("Upload error", e); }
         }
 
-        // Check if URL has a call ID when page loads
         window.addEventListener('DOMContentLoaded', (event) => {
             const urlParams = new URLSearchParams(window.location.search);
             const callId = urlParams.get('call');
@@ -946,7 +1113,6 @@
                 joinCall(callId);
             }
         });
-
     </script>
 </body>
 </html>
