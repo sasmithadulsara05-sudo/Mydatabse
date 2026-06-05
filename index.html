@@ -485,7 +485,7 @@
         }
 
         // ==========================================
-        //          ADVANCED STEALTH AI LOGIC
+        //       REAL GEMINI AI INTEGRATION API
         // ==========================================
         function openAiChat() {
             document.getElementById('homeView').style.display = 'none';
@@ -494,7 +494,7 @@
             
             const aiBox = document.getElementById('aiChatBox');
             if(aiBox.children.length === 0) {
-                displayAiMsg("👋 සාදරයෙන් පිළිගන්නවා! මම ඔයාගේ Advanced AI සහායකයා. මට පුළුවන් මේ ඇප් එකේ තියෙන සියලුම Chat දත්ත විශ්ලේෂණය කරලා ඔයාට අවශ්‍ය දේ හොයලා දෙන්න.\n\n💡 **ඔයාට මගෙන් අහන්න පුළුවන් දේවල්:**\n1. 'k අකුරෙන් පටන් ගන්නා text දෙන්න' (ඕනෑම අකුරක්)\n2. 'පලවෙනි විඩියෝ එක දෙන්න' හෝ 'දෙවෙනි පොටෝ එක දෙන්න'\n3. 'සාරාංශය' (මුළු Chat වල සම්පූර්ණ දත්ත වාර්තාවක්)\n4. 'සෙවුම: [වචනය]' (ඕනෑම මැසේජ් එකක් සෙවීමට)", 'ai');
+                displayAiMsg("👋 සාදරයෙන් පිළිගන්නවා! මම ඔයාගේ Advanced AI සහායකයා (Gemini). ඔයාගේ Database එකේ තියෙන ඕනෑම දෙයක් ගැන මගෙන් සිංහලෙන් හරි ඉංග්‍රීසියෙන් හරි අහන්න පුළුවන්. \n\nඋදාහරණ: \n- 'අන්තිමට ආපු මැසේජ් එක මොකක්ද?'\n- 'මට ටික්ටොක් අංක 13 වීඩියෝව දෙන්න'\n- 'සම්පූර්ණ සාරාංශයක් දෙන්න'", 'ai');
             }
         }
 
@@ -514,7 +514,7 @@
 
             setTimeout(() => {
                 processAiQuery(text);
-            }, 600);
+            }, 500);
         }
 
         function displayAiMsg(text, sender, mediaUrl = null) {
@@ -542,103 +542,80 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        function processAiQuery(query) {
+        async function processAiQuery(query) {
             let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
-            query = query.toLowerCase().trim();
             
-            // Feature 1: Check text matching specified prefix letter
-            let letterMatch = query.match(/([a-zA-Z])\s*(අකුරෙන්|වලින්|පටන්|start)/i) || ((query.includes("පටන්") || query.includes("start")) && query.match(/[a-zA-Z]/));
-            if (letterMatch) {
-                let targetLetter = Array.isArray(letterMatch) ? letterMatch[1] : letterMatch[0];
-                targetLetter = targetLetter.toLowerCase();
-                
-                let results = backups.filter(m => m.text && m.text.toLowerCase().trim().startsWith(targetLetter));
-                if(results.length > 0) {
-                    let msgText = `🎯 **'${targetLetter.toUpperCase()}' අකුරෙන් පටන් ගන්නා පණිවිඩ ${results.length}ක් හමුවුණා:**\n\n`;
-                    results.forEach((r, idx) => {
-                        msgText += `${idx + 1}. [${r.group_name || 'Group'}] -> ${r.text}\n`;
-                    });
-                    displayAiMsg(msgText, 'ai');
-                } else {
-                    displayAiMsg(`❌ '${targetLetter.toUpperCase()}' අකුරෙන් පටන් ගන්නා කිසිදු text පණිවිඩයක් ප්‍රධාන chat වල හමු වූයේ නැත.`, 'ai');
-                }
-                return;
-            }
+            // Format the database history to feed to Gemini
+            let chatContext = backups.map((m, index) => {
+                return `[Index: ${index + 1}] Group: ${m.group_name || 'Normal'}, Message: "${m.text || ''}", Media URL attached: ${m.media_url ? m.media_url : 'None'}`;
+            }).join('\n');
             
-            // Feature 2: Smart Video / Photo Index Extraction Engine
-            let isVideo = query.includes("විඩියෝ") || query.includes("video") || query.includes("ටික්ටොක්") || query.includes("tiktok");
-            let isPhoto = query.includes("පොටො") || query.includes("photo") || query.includes("පින්තූර") || query.includes("image");
+            // AI Loading Indicator
+            const aiBox = document.getElementById('aiChatBox');
+            const loadingId = 'loading-' + Date.now();
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'msg msg-ai';
+            loadingDiv.id = loadingId;
+            loadingDiv.innerHTML = `<div style="white-space: pre-wrap;">⏳ සිතමින් පවතී... (AI is processing)</div>`;
+            aiBox.appendChild(loadingDiv);
+            aiBox.scrollTop = aiBox.scrollHeight;
+
+            // User's provided API KEY
+            const GEMINI_API_KEY = "AQ.Ab8RN6KsPGOs0FVIN-291FQqBzMpmuF3jglrWVPgmkdXnkwI-g";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
             
-            if (isVideo || isPhoto) {
-                let mediaItems = backups.filter(m => {
-                    if(!m.media_url) return false;
-                    let lowUrl = m.media_url.toLowerCase();
-                    let isVidUrl = lowUrl.includes('.mp4') || lowUrl.includes('.mov') || lowUrl.includes('video');
-                    if(isVideo) return isVidUrl;
-                    if(isPhoto) return !isVidUrl && (lowUrl.includes('.jpg') || lowUrl.includes('.jpeg') || lowUrl.includes('.png') || lowUrl.includes('image'));
-                    return false;
+            // Dynamic prompt instructing Gemini
+            const promptText = `
+You are the built-in, highly advanced AI assistant for this secure app.
+Here is the raw data from the app's chat history/database:
+---
+${chatContext}
+---
+
+The user is asking: "${query}"
+
+INSTRUCTIONS:
+1. Search the chat database provided above and answer accurately. 
+2. If the user asks for a summary/stats, count the messages and types and provide it nicely.
+3. If the user asks for a specific media (like "video 13" or "last image"), find it in the database and ALWAYS include its raw Media URL in your text response so the system can render it.
+4. If you include a Media URL, put it on a new line like this: "URL: [the_actual_url_here]"
+5. You MUST reply in the EXACT language the user is speaking (Sinhala, English, or Singlish). Do NOT translate if they ask in Sinhala.
+6. Be friendly, smart, and direct. Use emojis. 
+`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }]
+                    })
                 });
                 
-                if(mediaItems.length === 0) {
-                    displayAiMsg(`❌ ඔයා සොයන ආකාරයේ කිසිදු මාධ්‍ය ගොනුවක් (Media File) chat ඉතිහාසයේ හමු වූයේ නැත.`, 'ai');
-                    return;
-                }
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
                 
-                // Determine Index position
-                let index = 0; 
-                if(query.includes("දෙවෙනි") || query.includes("දෙවන") || query.includes("2") || query.includes("second")) index = 1;
-                else if(query.includes("තුන්වෙනි") || query.includes("තුන්වන") || query.includes("3") || query.includes("third")) index = 2;
-                else if(query.includes("හතරවෙනි") || query.includes("4") || query.includes("fourth")) index = 3;
-                else if(query.includes("අන්තිම") || query.includes("last")) index = mediaItems.length - 1;
-                
-                if(index >= mediaItems.length || index < 0) {
-                    displayAiMsg(`⚠️ ඔයා ඉල්ලපු අංකයට අදාල මාධ්‍ය ගොනුවක් නැත. දැනට පවතින්නේ ගොනු ${mediaItems.length}ක් පමණි.`, 'ai');
-                    return;
-                }
-                
-                let selectedMedia = mediaItems[index];
-                let typeStr = isVideo ? "📹 වීඩියෝව" : "📷 ඡායාරූපය";
-                displayAiMsg(`🎯 ඔයා ඉල්ලපු ${typeStr} (අංක: ${index + 1}) මෙන්න:\n📌 සමූහය: ${selectedMedia.group_name || 'Normal text'}`, 'ai', selectedMedia.media_url);
-                return;
-            }
-            
-            // Feature 3: Smart Summary Dashboard Command
-            if (query.includes("සාරාංශ") || query.includes("summary") || query.includes("stats")) {
-                let totalMsgs = backups.length;
-                let vids = backups.filter(m => m.media_url && (m.media_url.toLowerCase().includes('.mp4') || m.media_url.toLowerCase().includes('video'))).length;
-                let imgs = backups.filter(m => m.media_url && !(m.media_url.toLowerCase().includes('.mp4') || m.media_url.toLowerCase().includes('video'))).length;
-                let textOnly = totalMsgs - (vids + imgs);
-                
-                let summaryText = `📊 **පද්ධති දත්ත සාරාංශ වාර්තාව (System Summary):**\n\n` +
-                                  `💬 මුළු පණිවිඩ සංඛ්‍යාව: ${totalMsgs}\n` +
-                                  `✍️ Text පණිවිඩ පමණක්: ${textOnly}\n` +
-                                  `📹 වීඩියෝ දර්ශන: ${vids}\n` +
-                                  `📷 ඡායාරූප සහ ගොනු: ${imgs}\n\n` +
-                                  `⚙️ ආරක්ෂිත තත්ත්වය: සක්‍රීයයි (Continuous Location Tracking active)`;
-                displayAiMsg(summaryText, 'ai');
-                return;
-            }
-            
-            // Feature 4: Keyword Filtering
-            if(query.includes("සෙවුම") || query.includes("search") || query.includes("හොයන්න")) {
-                let term = query.replace("සෙවුම", "").replace("search", "").replace(":", "").trim();
-                if(term.length > 0) {
-                    let searchResults = backups.filter(m => m.text && m.text.toLowerCase().includes(term));
-                    if(searchResults.length > 0) {
-                        let textOut = `🔍 **'${term}' වචනය අඩංගු පණිවිඩ ${searchResults.length}ක් හමුවුණා:**\n\n`;
-                        searchResults.forEach((r, i) => {
-                            textOut += `${i+1}. [${r.group_name}]: ${r.text}\n`;
-                        });
-                        displayAiMsg(textOut, 'ai');
-                    } else {
-                        displayAiMsg(`❌ '${term}' වචනය අඩංගු කිසිදු පණිවිඩයක් හමු වූයේ නැත.`, 'ai');
+                if(data.candidates && data.candidates.length > 0) {
+                    let aiOutputText = data.candidates[0].content.parts[0].text;
+                    let mediaUrlToRender = null;
+                    
+                    // Automatically detect and extract Supabase/Firebase media URLs from AI text
+                    const urlRegex = /(https?:\/\/[^\s]+(supabase\.co|firebasestorage)[^\s]*)/gi;
+                    const extractedUrls = aiOutputText.match(urlRegex);
+                    
+                    if (extractedUrls && extractedUrls.length > 0) {
+                        mediaUrlToRender = extractedUrls[0]; // Take the first URL to render visually
                     }
-                    return;
+                    
+                    displayAiMsg(aiOutputText, 'ai', mediaUrlToRender);
+                } else {
+                    displayAiMsg("⚠️ සමාවෙන්න, මට උත්තරයක් ලබා දීමට නොහැකි වුණා. නැවත උත්සාහ කරන්න.", 'ai');
                 }
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                console.error("Gemini AI Error: ", error);
+                displayAiMsg("❌ සම්බන්ධතාවයේ දෝෂයක්. ඔයාගේ API Key එක නිවැරදිදැයි පරීක්ෂා කර නැවත උත්සාහ කරන්න.", 'ai');
             }
-            
-            // Fallback
-            displayAiMsg("🤖 මට ඔයා කියපු දේ පැහැදිලි නැහැ. කරුණාකර ඉංග්‍රීසි අකුරකින් පටන් ගන්නා text (උදා: k වලින් පටන් ගන්න), පලවෙනි/දෙවෙනි වීඩියෝ හෝ 'සාරාංශය' වැනි විධානයක් ලබාදෙන්න.", 'ai');
         }
 
         // ==========================================
