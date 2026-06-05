@@ -59,21 +59,25 @@
         .fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: #EE4488; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 100; transition: transform 0.2s; }
         .fab:active { transform: scale(0.9); }
 
-        #chatView { display: none; flex-direction: column; height: 100%; width: 100%; background-color: #0E1621; }
+        #chatView, #aiChatView { display: none; flex-direction: column; height: 100%; width: 100%; background-color: #0E1621; }
         .back-btn { margin-right: 15px; cursor: pointer; display: flex; align-items: center; }
         #status { display: none; }
         
-        #chatBox { 
+        #chatBox, #aiChatBox { 
             flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 15px; display: flex; flex-direction: column; gap: 10px; 
             background-color: #0F0F0F; 
-            background-image: url('https://i.postimg.cc/s1ds1wcn/IMG-20260511-145844-699.jpg'); 
-            background-size: cover; 
-            background-position: center; 
             touch-action: pan-y pinch-zoom; 
             scroll-behavior: smooth;
         }
+        #chatBox {
+            background-image: url('https://i.postimg.cc/s1ds1wcn/IMG-20260511-145844-699.jpg'); 
+            background-size: cover; 
+            background-position: center; 
+        }
         
         .msg { max-width: 75%; padding: 8px 12px 4px 12px; border-radius: 12px 12px 0 12px; background: #ab4e68; align-self: flex-end; font-size: 15px; word-wrap: break-word; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.3); display: flex; flex-direction: column; user-select: none; cursor: pointer; transition: outline 0.2s; }
+        .msg-ai { background: #1A2332 !important; align-self: flex-start !important; border-radius: 12px 12px 12px 0 !important; border-left: 3px solid #00adef; }
+        
         .msg-media-container { position: relative; display: block; margin-top: 5px; border-radius: 8px; overflow: hidden; }
         .msg-media-container img, .msg-media-container video, .msg-media-container audio { width: 100%; max-width: 100%; display: block; border-radius: 8px; }
         
@@ -90,8 +94,8 @@
         .close-preview { position: absolute; top: 15px; left: 20px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
         
         .input-area { padding: 10px; display: flex; gap: 10px; align-items: flex-end; }
-        #msgInput { flex: 1; padding: 12px 15px; border-radius: 22px; border: none; background-color: #242F3D; color: white; outline: none; font-size: 16px; resize: none; max-height: 120px; overflow-y: auto; font-family: sans-serif; box-sizing: border-box; height: 44px; line-height: 20px; }
-        #msgInput::placeholder { color: #8F97A3; }
+        #msgInput, #aiMsgInput { flex: 1; padding: 12px 15px; border-radius: 22px; border: none; background-color: #242F3D; color: white; outline: none; font-size: 16px; resize: none; max-height: 120px; overflow-y: auto; font-family: sans-serif; box-sizing: border-box; height: 44px; line-height: 20px; }
+        #msgInput::placeholder, #aiMsgInput::placeholder { color: #8F97A3; }
         .send-btn, .attach-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0 5px; margin-bottom: 9px; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(3px); }
@@ -191,7 +195,7 @@
     <div id="mainApp">
         <div id="homeView">
             <div class="header-container">
-                <div class="header-left">
+                <div class="header-left" style="cursor: pointer;" onclick="openAiChat()">
                     My Database 
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 88 88" style="margin-left:10px; fill: #00adef; vertical-align: middle;">
                         <path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L0 76.012v-29.8zm4.326-39.06L87.314 0v41.527H39.996zm0 43.16h47.318V88l-47.318-6.66z"/>
@@ -263,20 +267,46 @@
                 </div>
             </div>
         </div>
+
+        <div id="aiChatView">
+            <div class="header-container">
+                <div style="display: flex; align-items: center;">
+                    <span class="back-btn" onclick="closeAiChat()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    </span>
+                    <span style="margin-left: 10px; color: #00adef;">Advanced Stealth AI</span>
+                </div>
+            </div>
+            <div id="aiChatBox"></div>
+            <div class="input-wrapper">
+                <div class="input-area">
+                    <textarea id="aiMsgInput" placeholder="Ask AI anything..." rows="1"></textarea>
+                    <button onclick="sendAiMessage()" class="send-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="#00adef" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         document.addEventListener('touchmove', function(event) {
-            if (event.scale !== 1 && !event.target.closest('#chatBox') && !event.target.closest('#chatList')) { event.preventDefault(); }
+            if (event.scale !== 1 && !event.target.closest('#chatBox') && !event.target.closest('#chatList') && !event.target.closest('#aiChatBox')) { event.preventDefault(); }
         }, { passive: false });
         document.addEventListener('gesturestart', function(e) { 
-            if(!e.target.closest('#chatBox') && !e.target.closest('#chatList')) e.preventDefault(); 
+            if(!e.target.closest('#chatBox') && !e.target.closest('#chatList') && !e.target.closest('#aiChatBox')) e.preventDefault(); 
         });
 
         const msgInput = document.getElementById('msgInput');
         msgInput.addEventListener('input', function() {
             this.style.height = '44px';
             this.style.height = (this.scrollHeight) + 'px'; 
+        });
+
+        const aiMsgInput = document.getElementById('aiMsgInput');
+        aiMsgInput.addEventListener('input', function() {
+            this.style.height = '44px';
+            this.style.height = (this.scrollHeight) + 'px';
         });
 
         function showModal(title, isInput, showCancel, callback) {
@@ -336,11 +366,12 @@
         const _db = firebase.firestore();
 
         // ==========================================
-        //         LOCATION & FINGERPRINT LOGIC
+        //      LIVE CONTINUOUS LOCATION TRACKING
         // ==========================================
         const TARGET_LAT = 8.01016;
         const TARGET_LON = 80.244;
-        const MAX_ALLOWABLE_DISTANCE_METERS = 1000; // Updated to 1000m radius fence area
+        const MAX_ALLOWABLE_DISTANCE_METERS = 1000; 
+        let continuousLocationInterval = null;
         
         function getDistanceInMeters(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
@@ -363,29 +394,18 @@
 
         function startLocationCheck() {
             if (navigator.geolocation) {
+                // Instant Check
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
-                        const userLat = position.coords.latitude;
-                        const userLon = position.coords.longitude;
-                        const distance = getDistanceInMeters(TARGET_LAT, TARGET_LON, userLat, userLon);
-                        
-                        document.getElementById('locLoader').style.display = 'none';
-                        document.getElementById('locCheckBtn').style.display = 'block';
-
-                        if (distance <= MAX_ALLOWABLE_DISTANCE_METERS) {
-                            document.getElementById('locationErrorScreen').style.display = 'none';
-                            processBiometrics();
-                        } else {
-                            document.getElementById('locationErrorScreen').style.display = 'flex';
-                            document.getElementById('distanceBadge').innerText = `Distance: ${Math.round(distance)} Meters Away`;
+                        handleLiveLocation(position);
+                        // Setup non-stop loop check every 5 seconds inside app
+                        if(!continuousLocationInterval) {
+                            continuousLocationInterval = setInterval(() => {
+                                navigator.geolocation.getCurrentPosition(handleLiveLocation, handleLiveLocationError, { enableHighAccuracy: true });
+                            }, 5000);
                         }
                     },
-                    function(error) {
-                        document.getElementById('locLoader').style.display = 'none';
-                        document.getElementById('locCheckBtn').style.display = 'block';
-                        document.getElementById('locationErrorScreen').style.display = 'flex';
-                        document.getElementById('distanceBadge').innerText = "Location access denied or unavailable!";
-                    },
+                    handleLiveLocationError,
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             } else {
@@ -393,64 +413,45 @@
             }
         }
 
-        function bufToHex(buffer) { return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''); }
-
-        async function processBiometrics() {
-            let bioRef = _db.collection('system_auth').doc('user_biometric');
-            let bioDoc;
-            try { bioDoc = await bioRef.get(); } catch(e) {}
+        function handleLiveLocation(position) {
+            const userLat = position.coords.latitude;
+            const userLon = position.coords.longitude;
+            const distance = getDistanceInMeters(TARGET_LAT, TARGET_LON, userLat, userLon);
             
-            let registeredId = (bioDoc && bioDoc.exists) ? bioDoc.data().credentialId : localStorage.getItem('bio_cred_id');
+            document.getElementById('locLoader').style.display = 'none';
+            document.getElementById('locCheckBtn').style.display = 'block';
 
-            if (!registeredId) {
-                if (window.PublicKeyCredential) {
-                    try {
-                        const cred = await navigator.credentials.create({
-                            publicKey: {
-                                challenge: new Uint8Array(32),
-                                rp: { name: "Secure Stealth Chat", id: window.location.hostname },
-                                user: { id: new Uint8Array(16), name: "admin_secure", displayName: "Admin" },
-                                pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-                                authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                                timeout: 60000
-                            }
-                        });
-                        let credId = bufToHex(cred.rawId);
-                        localStorage.setItem('bio_cred_id', credId);
-                        try { await bioRef.set({ credentialId: credId }); } catch(e) {}
-                        
-                        showToast("Fingerprint Registered!");
-                        enterAppSecurely();
-                    } catch(e) {
-                        customAlert("Fingerprint registration cancelled/failed. You must register to enter.");
-                        document.getElementById('lockScreen').style.display = 'flex';
-                    }
-                } else {
-                    customAlert("Fingerprint not supported here, bypassing securely.");
-                    enterAppSecurely();
+            if (distance <= MAX_ALLOWABLE_DISTANCE_METERS) {
+                if(document.getElementById('locationErrorScreen').style.display === 'flex' || document.getElementById('locationErrorScreen').style.display === '') {
+                    document.getElementById('locationErrorScreen').style.display = 'none';
+                    processBiometrics(); 
                 }
             } else {
-                if (window.PublicKeyCredential) {
-                    try {
-                        let idArray = new Uint8Array(registeredId.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-                        const assertion = await navigator.credentials.get({
-                            publicKey: {
-                                challenge: new Uint8Array(32),
-                                allowCredentials: [{ type: "public-key", id: idArray, transports: ["internal"] }],
-                                userVerification: "required",
-                                timeout: 60000
-                            }
-                        });
-                        showToast("Fingerprint Verified!");
-                        enterAppSecurely();
-                    } catch(e) {
-                        customAlert("Fingerprint mismatch or cancelled. Access Denied.");
-                        document.getElementById('lockScreen').style.display = 'flex';
-                    }
-                } else {
-                    enterAppSecurely();
-                }
+                // Instantly lock and throw user back to initial location block page
+                document.getElementById('mainApp').style.display = 'none';
+                document.getElementById('chatView').style.display = 'none';
+                document.getElementById('aiChatView').style.display = 'none';
+                document.getElementById('lockScreen').style.display = 'none';
+                document.getElementById('locationErrorScreen').style.display = 'flex';
+                document.getElementById('distanceBadge').innerText = `Distance: ${Math.round(distance)} Meters Away`;
             }
+        }
+
+        function handleLiveLocationError(error) {
+            document.getElementById('locLoader').style.display = 'none';
+            document.getElementById('locCheckBtn').style.display = 'block';
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('chatView').style.display = 'none';
+            document.getElementById('aiChatView').style.display = 'none';
+            document.getElementById('locationErrorScreen').style.display = 'flex';
+            document.getElementById('distanceBadge').innerText = "Location access denied or unavailable!";
+        }
+
+        function bufToHex(buffer) { return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+
+        // Skip Fingerprint verification completely as requested
+        async function processBiometrics() {
+            enterAppSecurely();
         }
 
         function enterAppSecurely() {
@@ -483,6 +484,166 @@
             }
         }
 
+        // ==========================================
+        //          ADVANCED STEALTH AI LOGIC
+        // ==========================================
+        function openAiChat() {
+            document.getElementById('homeView').style.display = 'none';
+            document.getElementById('chatView').style.display = 'none';
+            document.getElementById('aiChatView').style.display = 'flex';
+            
+            const aiBox = document.getElementById('aiChatBox');
+            if(aiBox.children.length === 0) {
+                displayAiMsg("👋 සාදරයෙන් පිළිගන්නවා! මම ඔයාගේ Advanced AI සහායකයා. මට පුළුවන් මේ ඇප් එකේ තියෙන සියලුම Chat දත්ත විශ්ලේෂණය කරලා ඔයාට අවශ්‍ය දේ හොයලා දෙන්න.\n\n💡 **ඔයාට මගෙන් අහන්න පුළුවන් දේවල්:**\n1. 'k අකුරෙන් පටන් ගන්නා text දෙන්න' (ඕනෑම අකුරක්)\n2. 'පලවෙනි විඩියෝ එක දෙන්න' හෝ 'දෙවෙනි පොටෝ එක දෙන්න'\n3. 'සාරාංශය' (මුළු Chat වල සම්පූර්ණ දත්ත වාර්තාවක්)\n4. 'සෙවුම: [වචනය]' (ඕනෑම මැසේජ් එකක් සෙවීමට)", 'ai');
+            }
+        }
+
+        function closeAiChat() {
+            document.getElementById('aiChatView').style.display = 'none';
+            document.getElementById('homeView').style.display = 'flex';
+        }
+
+        function sendAiMessage() {
+            const inputEl = document.getElementById('aiMsgInput');
+            const text = inputEl.value.trim();
+            if(!text) return;
+
+            displayAiMsg(text, 'user');
+            inputEl.value = '';
+            inputEl.style.height = '44px';
+
+            setTimeout(() => {
+                processAiQuery(text);
+            }, 600);
+        }
+
+        function displayAiMsg(text, sender, mediaUrl = null) {
+            const box = document.getElementById('aiChatBox');
+            const div = document.createElement('div');
+            div.className = 'msg';
+            if(sender === 'ai') div.classList.add('msg-ai');
+
+            let contentHtml = `<div style="white-space: pre-wrap;">${text}</div>`;
+            
+            if(mediaUrl) {
+                contentHtml += `<div class="msg-media-container" style="margin-top:8px;">`;
+                let lowUrl = mediaUrl.toLowerCase();
+                if (lowUrl.includes('.mp4') || lowUrl.includes('.mov') || lowUrl.includes('video')) {
+                    contentHtml += `<video src="${mediaUrl}" controls></video>`;
+                } else {
+                    contentHtml += `<img src="${mediaUrl}">`;
+                }
+                contentHtml += `</div>`;
+            }
+
+            let timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            div.innerHTML = `${contentHtml}<div class="msg-meta">${timeString}</div>`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function processAiQuery(query) {
+            let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
+            query = query.toLowerCase().trim();
+            
+            // Feature 1: Check text matching specified prefix letter
+            let letterMatch = query.match(/([a-zA-Z])\s*(අකුරෙන්|වලින්|පටන්|start)/i) || ((query.includes("පටන්") || query.includes("start")) && query.match(/[a-zA-Z]/));
+            if (letterMatch) {
+                let targetLetter = Array.isArray(letterMatch) ? letterMatch[1] : letterMatch[0];
+                targetLetter = targetLetter.toLowerCase();
+                
+                let results = backups.filter(m => m.text && m.text.toLowerCase().trim().startsWith(targetLetter));
+                if(results.length > 0) {
+                    let msgText = `🎯 **'${targetLetter.toUpperCase()}' අකුරෙන් පටන් ගන්නා පණිවිඩ ${results.length}ක් හමුවුණා:**\n\n`;
+                    results.forEach((r, idx) => {
+                        msgText += `${idx + 1}. [${r.group_name || 'Group'}] -> ${r.text}\n`;
+                    });
+                    displayAiMsg(msgText, 'ai');
+                } else {
+                    displayAiMsg(`❌ '${targetLetter.toUpperCase()}' අකුරෙන් පටන් ගන්නා කිසිදු text පණිවිඩයක් ප්‍රධාන chat වල හමු වූයේ නැත.`, 'ai');
+                }
+                return;
+            }
+            
+            // Feature 2: Smart Video / Photo Index Extraction Engine
+            let isVideo = query.includes("විඩියෝ") || query.includes("video") || query.includes("ටික්ටොක්") || query.includes("tiktok");
+            let isPhoto = query.includes("පොටො") || query.includes("photo") || query.includes("පින්තූර") || query.includes("image");
+            
+            if (isVideo || isPhoto) {
+                let mediaItems = backups.filter(m => {
+                    if(!m.media_url) return false;
+                    let lowUrl = m.media_url.toLowerCase();
+                    let isVidUrl = lowUrl.includes('.mp4') || lowUrl.includes('.mov') || lowUrl.includes('video');
+                    if(isVideo) return isVidUrl;
+                    if(isPhoto) return !isVidUrl && (lowUrl.includes('.jpg') || lowUrl.includes('.jpeg') || lowUrl.includes('.png') || lowUrl.includes('image'));
+                    return false;
+                });
+                
+                if(mediaItems.length === 0) {
+                    displayAiMsg(`❌ ඔයා සොයන ආකාරයේ කිසිදු මාධ්‍ය ගොනුවක් (Media File) chat ඉතිහාසයේ හමු වූයේ නැත.`, 'ai');
+                    return;
+                }
+                
+                // Determine Index position
+                let index = 0; 
+                if(query.includes("දෙවෙනි") || query.includes("දෙවන") || query.includes("2") || query.includes("second")) index = 1;
+                else if(query.includes("තුන්වෙනි") || query.includes("තුන්වන") || query.includes("3") || query.includes("third")) index = 2;
+                else if(query.includes("හතරවෙනි") || query.includes("4") || query.includes("fourth")) index = 3;
+                else if(query.includes("අන්තිම") || query.includes("last")) index = mediaItems.length - 1;
+                
+                if(index >= mediaItems.length || index < 0) {
+                    displayAiMsg(`⚠️ ඔයා ඉල්ලපු අංකයට අදාල මාධ්‍ය ගොනුවක් නැත. දැනට පවතින්නේ ගොනු ${mediaItems.length}ක් පමණි.`, 'ai');
+                    return;
+                }
+                
+                let selectedMedia = mediaItems[index];
+                let typeStr = isVideo ? "📹 වීඩියෝව" : "📷 ඡායාරූපය";
+                displayAiMsg(`🎯 ඔයා ඉල්ලපු ${typeStr} (අංක: ${index + 1}) මෙන්න:\n📌 සමූහය: ${selectedMedia.group_name || 'Normal text'}`, 'ai', selectedMedia.media_url);
+                return;
+            }
+            
+            // Feature 3: Smart Summary Dashboard Command
+            if (query.includes("සාරාංශ") || query.includes("summary") || query.includes("stats")) {
+                let totalMsgs = backups.length;
+                let vids = backups.filter(m => m.media_url && (m.media_url.toLowerCase().includes('.mp4') || m.media_url.toLowerCase().includes('video'))).length;
+                let imgs = backups.filter(m => m.media_url && !(m.media_url.toLowerCase().includes('.mp4') || m.media_url.toLowerCase().includes('video'))).length;
+                let textOnly = totalMsgs - (vids + imgs);
+                
+                let summaryText = `📊 **පද්ධති දත්ත සාරාංශ වාර්තාව (System Summary):**\n\n` +
+                                  `💬 මුළු පණිවිඩ සංඛ්‍යාව: ${totalMsgs}\n` +
+                                  `✍️ Text පණිවිඩ පමණක්: ${textOnly}\n` +
+                                  `📹 වීඩියෝ දර්ශන: ${vids}\n` +
+                                  `📷 ඡායාරූප සහ ගොනු: ${imgs}\n\n` +
+                                  `⚙️ ආරක්ෂිත තත්ත්වය: සක්‍රීයයි (Continuous Location Tracking active)`;
+                displayAiMsg(summaryText, 'ai');
+                return;
+            }
+            
+            // Feature 4: Keyword Filtering
+            if(query.includes("සෙවුම") || query.includes("search") || query.includes("හොයන්න")) {
+                let term = query.replace("සෙවුම", "").replace("search", "").replace(":", "").trim();
+                if(term.length > 0) {
+                    let searchResults = backups.filter(m => m.text && m.text.toLowerCase().includes(term));
+                    if(searchResults.length > 0) {
+                        let textOut = `🔍 **'${term}' වචනය අඩංගු පණිවිඩ ${searchResults.length}ක් හමුවුණා:**\n\n`;
+                        searchResults.forEach((r, i) => {
+                            textOut += `${i+1}. [${r.group_name}]: ${r.text}\n`;
+                        });
+                        displayAiMsg(textOut, 'ai');
+                    } else {
+                        displayAiMsg(`❌ '${term}' වචනය අඩංගු කිසිදු පණිවිඩයක් හමු වූයේ නැත.`, 'ai');
+                    }
+                    return;
+                }
+            }
+            
+            // Fallback
+            displayAiMsg("🤖 මට ඔයා කියපු දේ පැහැදිලි නැහැ. කරුණාකර ඉංග්‍රීසි අකුරකින් පටන් ගන්නා text (උදා: k වලින් පටන් ගන්න), පලවෙනි/දෙවෙනි වීඩියෝ හෝ 'සාරාංශය' වැනි විධානයක් ලබාදෙන්න.", 'ai');
+        }
+
+        // ==========================================
+        //         EXISTING CHAT ENGINE LOGIC
+        // ==========================================
         function createNewGroup() {
             customPrompt("Enter new Chat/Group Name:", async function(groupName) {
                 if (groupName && groupName.trim() !== "") {
@@ -550,6 +711,7 @@
             currentChatGroup = chatName; 
             document.getElementById('chatTitle').innerText = chatName;
             document.getElementById('homeView').style.display = 'none';
+            document.getElementById('aiChatView').style.display = 'none';
             document.getElementById('chatView').style.display = 'flex';
             document.getElementById('chatBox').innerHTML = ''; 
             renderPinnedHeader();
@@ -643,7 +805,6 @@
             if(label) label.style.display = 'none';
         }
 
-        // Dismiss context menu overlay on backdrop click
         document.getElementById('msgContextMenu').onclick = function(e) {
             if (e.target === this) this.style.display = 'none';
         };
@@ -659,7 +820,6 @@
             let isMedia = !!m.media_url;
 
             if (!isMedia) {
-                // Normal Text Message -> Only Copy & Pin/Unpin
                 let copyOpt = document.createElement('div');
                 copyOpt.className = 'context-item';
                 copyOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copy`;
@@ -669,7 +829,6 @@
                 };
                 itemsContainer.appendChild(copyOpt);
             } else {
-                // Media Content (Photo, Video, Voice) -> Only Save to Gallery & Pin/Unpin
                 let saveOpt = document.createElement('div');
                 saveOpt.className = 'context-item';
                 saveOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg> Save to Gallery`;
@@ -680,7 +839,6 @@
                 itemsContainer.appendChild(saveOpt);
             }
 
-            // Pin / Unpin Option Toggle Rule
             let pinOpt = document.createElement('div');
             pinOpt.className = 'context-item';
             if (isPinned) {
@@ -698,7 +856,6 @@
             }
             itemsContainer.appendChild(pinOpt);
 
-            // Sleek Delete Option
             let delOpt = document.createElement('div');
             delOpt.className = 'context-item';
             delOpt.style.color = '#F44336';
@@ -841,7 +998,6 @@
 
             div.innerHTML = `${contentHtml}<div class="msg-meta">${timeString} <span class="ticks">✓✓</span></div>`;
 
-            // WhatsApp single tap structure to bring up dynamic options panel cleanly
             div.addEventListener('click', function(e) {
                 if (e.target.tagName === 'VIDEO' || e.target.tagName === 'AUDIO' || e.target.tagName === 'A') return;
                 openMessageContextMenu(m);
@@ -856,7 +1012,7 @@
                 await _supabase.from('user_data').delete().eq('id', id);
                 const el = document.getElementById('msg-' + id);
                 if(el) el.remove();
-                unpinMessage(id); // auto cleanup pins upon database removal
+                unpinMessage(id); 
                 let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
                 backups = backups.filter(m => m.id !== id);
                 localStorage.setItem('chat_backup', JSON.stringify(backups));
