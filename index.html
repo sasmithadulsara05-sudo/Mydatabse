@@ -1,1274 +1,2044 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Secure Stealth Chat</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aviator - Admin Panel</title>
+  
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+        background-color: #0f111a;
+        color: #fff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+    }
+
+    .admin-container {
+        background-color: #1a1d2d;
+        width: 100%;
+        max-width: 500px;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        border: 1px solid #2d324f;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .header h1 {
+        color: #e50b2e;
+        font-size: 24px;
+        font-weight: 900;
+        font-style: italic;
+        margin-bottom: 5px;
+    }
+
+    .header p {
+        color: #8e90c6;
+        font-size: 14px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #ccc;
+        font-size: 14px;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 12px;
+        background-color: #0f111a;
+        border: 1px solid #3b3c68;
+        border-radius: 8px;
+        color: white;
+        font-size: 16px;
+        outline: none;
+    }
+
+    .form-group input:focus {
+        border-color: #28a745;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 16px;
+        cursor: pointer;
+        transition: 0.2s;
+        color: white;
+    }
+
+    .btn:active {
+        transform: scale(0.98);
+    }
+
+    .btn-search {
+        background-color: #4078c0;
+        margin-bottom: 10px;
+    }
+
+    .user-card {
+        background-color: #222538;
+        border: 1px dashed #4078c0;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+        display: none;
+    }
+
+    .user-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 15px;
+    }
     
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/otpauth/9.1.2/otpauth.umd.min.js"></script>
+    .user-info span.label {
+        color: #8e90c6;
+    }
 
-    <style>
-        /* Full Screen & Anti-Zoom for outside elements */
-        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; background-color: #0E1621; color: white; }
-        
-        #lockScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #0E1621; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
-        .auth-container { width: 85%; max-width: 350px; text-align: center; }
-        
-        input[type="number"] { width: 100%; padding: 20px; font-size: 28px; text-align: center; border-radius: 12px; border: 1px solid #1a1a1a; background: #0a0a0a; color: #0f0; margin-bottom: 20px; letter-spacing: 8px; box-sizing: border-box; outline: none; box-shadow: inset 0 0 10px #000; }
-        .btn-confirm { width: 100%; background-color: #075e54; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.2s; }
-        .btn-confirm:active { transform: scale(0.95); }
-        
-        #loaderArea { display: none; margin-top: 25px; flex-direction: column; align-items: center; }
-        .spinner { border: 4px solid rgba(255, 255, 255, 0.1); border-left-color: #0f0; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .checking-text { margin-top: 10px; font-size: 14px; color: #0f0; font-family: monospace; letter-spacing: 1px; }
+    .user-info span.value {
+        font-weight: bold;
+        color: #fff;
+    }
 
-        /* Location Error Screen Styles */
-        #locationErrorScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #0E1621; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; text-align: center; padding: 20px; box-sizing: border-box; }
-        .rocket-icon { font-size: 80px; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
-        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
-        .error-title { color: #F44336; font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-        .error-desc { color: #8F97A3; font-size: 15px; margin-bottom: 25px; line-height: 1.5; }
-        .distance-badge { background: #242F3D; padding: 10px 20px; border-radius: 20px; font-family: monospace; color: #0f0; font-size: 18px; border: 1px solid #2B3139; margin-bottom: 30px; }
-        .btn-check-loc { background-color: #EE4488; color: white; border: none; padding: 15px 30px; border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(238, 68, 136, 0.4); }
-        #locLoader { display: none; flex-direction: column; align-items: center; }
+    .balance-display {
+        font-size: 24px;
+        color: #28a745;
+        font-weight: bold;
+        text-align: center;
+        margin: 15px 0;
+        padding: 10px;
+        background: #0f111a;
+        border-radius: 8px;
+    }
 
-        #mainApp { display: none; height: 100%; width: 100%; background-color: #0E1621; }
-        
-        .header-container { background-color: #17212B; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2B3139; font-size: 20px; font-weight: bold; }
-        .header-right { font-size: 24px; cursor: pointer; color: #B3B3B3; }
-        .header-left { display: flex; align-items: center; }
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
 
-        #homeView { display: flex; flex-direction: column; height: 100%; width: 100%; }
-        .search-container { background-color: #0E1621; padding: 10px 15px; border-bottom: 1px solid #2B3139; }
-        .search-bar { background-color: #242F3D; border-radius: 25px; display: flex; align-items: center; padding: 0 15px; height: 40px; }
-        #searchInput { background: transparent; border: none; color: white; outline: none; width: 100%; font-size: 15px; margin-left: 8px; }
-        #searchInput::placeholder { color: #8F97A3; }
-        
-        .chat-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
-        .chat-list-item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; transition: background 0.2s; }
-        .chat-list-item:active { background: #2B3139; }
-        .chat-avatar { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; margin-right: 15px; color: white; background: #E91E63; flex-shrink: 0; }
-        .chat-info { flex: 1; border-bottom: 1px solid #17212B; padding-bottom: 10px; padding-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .chat-name { font-size: 16px; font-weight: bold; margin-bottom: 5px; color: white; }
-        .chat-preview { font-size: 14px; color: #8F97A3; }
+    .verification-panel {
+        background: #0f111a;
+        border: 1px solid #3b3c68;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 15px;
+    }
 
-        .fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: #EE4488; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 100; transition: transform 0.2s; }
-        .fab:active { transform: scale(0.9); }
+    .btn-add { background-color: #28a745; flex: 1; }
+    .btn-deduct { background-color: #e50b2e; flex: 1; }
 
-        #chatView, #aiChatView { display: none; flex-direction: column; height: 100%; width: 100%; background-color: #0E1621; }
-        .back-btn { margin-right: 15px; cursor: pointer; display: flex; align-items: center; }
-        #status { display: none; }
-        
-        #chatBox, #aiChatBox { 
-            flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 15px; display: flex; flex-direction: column; gap: 10px; 
-            background-color: #0F0F0F; 
-            touch-action: pan-y pinch-zoom; 
-            scroll-behavior: smooth;
-        }
-        #chatBox {
-            background-image: url('https://i.postimg.cc/s1ds1wcn/IMG-20260511-145844-699.jpg'); 
-            background-size: cover; 
-            background-position: center; 
-        }
-        
-        .msg { max-width: 75%; padding: 8px 12px 4px 12px; border-radius: 12px 12px 0 12px; background: #ab4e68; align-self: flex-end; font-size: 15px; word-wrap: break-word; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.3); display: flex; flex-direction: column; user-select: none; cursor: pointer; transition: outline 0.2s; }
-        .msg-ai { background: #1A2332 !important; align-self: flex-start !important; border-radius: 12px 12px 12px 0 !important; border-left: 3px solid #00adef; }
-        
-        .msg-media-container { position: relative; display: block; margin-top: 5px; border-radius: 8px; overflow: hidden; }
-        .msg-media-container img, .msg-media-container video, .msg-media-container audio { width: 100%; max-width: 100%; display: block; border-radius: 8px; }
-        
-        .upload-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; border-radius: 8px; z-index: 10; backdrop-filter: blur(2px); }
-        .upload-spinner { width: 35px; height: 35px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 8px; }
-        .upload-text { font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.6); padding: 3px 8px; border-radius: 12px; font-family: monospace; }
-        
-        .msg-meta { font-size: 11px; color: rgba(255,255,255,0.7); align-self: flex-end; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
-        .ticks { color: #EE4488; font-weight: bold; font-size: 12px; }
+    .status-msg {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 14px;
+        font-weight: bold;
+        min-height: 20px;
+    }
 
-        .input-wrapper { background-color: #17212B; display: flex; flex-direction: column; border-top: 1px solid #2B3139; }
-        #imagePreviewContainer { display: none; padding: 10px 15px; position: relative; background: #242F3D; border-top-left-radius: 15px; border-top-right-radius: 15px; margin: 5px 5px 0 5px; text-align: center; }
-        #imagePreview { max-height: 120px; border-radius: 8px; display: inline-block; }
-        .close-preview { position: absolute; top: 15px; left: 20px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
-        
-        .input-area { padding: 10px; display: flex; gap: 10px; align-items: flex-end; }
-        #msgInput, #aiMsgInput { flex: 1; padding: 12px 15px; border-radius: 22px; border: none; background-color: #242F3D; color: white; outline: none; font-size: 16px; resize: none; max-height: 120px; overflow-y: auto; font-family: sans-serif; box-sizing: border-box; height: 44px; line-height: 20px; }
-        #msgInput::placeholder, #aiMsgInput::placeholder { color: #8F97A3; }
-        .send-btn, .attach-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 0 5px; margin-bottom: 9px; }
+    .btn-deposits {
+        background-color: #7b55c7;
+        margin-top: 18px;
+    }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(3px); }
-        .modal-box { background: #17212B; padding: 25px 20px; border-radius: 16px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .modal-title { font-size: 17px; margin-bottom: 20px; color: white; line-height: 1.4; }
-        .modal-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #2B3139; background: #242F3D; color: white; margin-bottom: 20px; outline: none; box-sizing: border-box; font-size: 16px; }
-        .modal-actions { display: flex; justify-content: space-between; gap: 12px; }
-        .modal-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; }
-        .modal-btn.cancel { background: transparent; color: #8F97A3; border: 1px solid #8F97A3; }
-        .modal-btn.ok { background: #EE4488; color: white; }
+    .btn-history {
+        background-color: #4078c0;
+        margin-top: 10px;
+    }
 
-        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #E91E63; color: white; padding: 10px 20px; border-radius: 25px; font-size: 14px; font-weight: bold; display: none; z-index: 10001; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    .deposit-list {
+        display: none;
+        margin-top: 16px;
+    }
 
-        /* --- Call System UI Styles --- */
-        #callScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0E1621; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100000; text-align: center; }
-        .call-avatar { width: 120px; height: 120px; border-radius: 50%; background: #242F3D; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; border: 3px solid #EE4488; box-shadow: 0 0 20px rgba(238, 68, 136, 0.4); }
-        #callStatusText { font-size: 22px; font-weight: bold; color: white; margin-bottom: 10px; }
-        #callIpDisplay { color: #0f0; font-family: monospace; font-size: 16px; margin-bottom: 5px; height: 20px; }
-        #callDeviceIdDisplay { color: #EE4488; font-family: monospace; font-size: 14px; margin-bottom: 20px; height: 20px; }
-        #callLinkDisplay { background: #17212B; padding: 15px; border-radius: 12px; font-size: 13px; color: #8F97A3; word-break: break-all; margin: 0 20px 30px 20px; max-width: 400px; border: 1px solid #2B3139; display: none; }
-        #endCallBtn { background: #F44336; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; display: none; transition: transform 0.2s; box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4); }
-        #endCallBtn:active { transform: scale(0.95); }
-        
-        .pulse { animation: pulse-animation 1.5s infinite; }
-        @keyframes pulse-animation { 0% { box-shadow: 0 0 0 0px rgba(238, 68, 136, 0.5); } 100% { box-shadow: 0 0 0 30px rgba(238, 68, 136, 0); } }
+    .deposit-item {
+        background: #222538;
+        border: 1px solid #3b3c68;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        overflow-wrap: anywhere;
+    }
 
-        /* Sleek WhatsApp Style Context Menu */
-        .context-menu-box { animation: popupScale 0.15s ease-out; background: #1F2C34 !important; border: 1px solid #2B3139; }
-        @keyframes popupScale { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .context-item { display: flex; align-items: center; padding: 14px 20px; color: white; font-size: 16px; cursor: pointer; gap: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .context-item:last-child { border-bottom: none; }
-        .context-item:active { background: #2A3942; }
-        .context-item svg { width: 22px; height: 22px; fill: #8F97A3; }
+    .deposit-item p {
+        margin: 0 0 8px;
+        color: #ccc;
+    }
 
-        /* Pinned Area Styles */
-        .pinned-bar-item { background: #182533; margin: 5px 15px 2px 15px; border-radius: 10px; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #EE4488; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
-        .pinned-bar-content { flex: 1; cursor: pointer; min-width: 0; }
-        .pinned-bar-title { color: #EE4488; font-weight: bold; font-size: 12px; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .pinned-bar-desc { color: #B3B3B3; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .pinned-bar-close { color: #8F97A3; font-size: 16px; cursor: pointer; padding: 4px 8px; transition: color 0.2s; }
-        .pinned-bar-close:hover { color: white; }
-    </style>
+    .deposit-item strong {
+        color: #fff;
+    }
+
+    .deposit-receipt {
+        display: inline-block;
+        color: #8dbbff;
+        margin: 4px 0 12px;
+    }
+
+    .deposit-receipt img {
+        display: block;
+        max-width: 100%;
+        max-height: 220px;
+        margin-top: 8px;
+        border-radius: 6px;
+    }
+
+    .deposit-actions button {
+        width: auto;
+        padding: 9px 12px;
+        margin: 4px 6px 0 0;
+        font-size: 14px;
+    }
+
+    .btn-approve { background-color: #28a745; }
+    .btn-reject { background-color: #e50b2e; }
+
+    .support-panel {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid #3b3c68;
+    }
+
+    .support-warning {
+        color: #ffcc80;
+        font-size: 12px;
+        line-height: 1.5;
+        margin: 10px 0;
+    }
+
+    .mobcash-panel {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid #3b3c68;
+    }
+
+    .mobcash-card {
+        width: 100%;
+        padding: 14px;
+        margin: 10px 0;
+        background: #222538;
+        color: #fff;
+        border: 1px solid #3b3c68;
+        border-radius: 8px;
+        text-align: left;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+    }
+
+    .mobcash-card:hover, .mobcash-card:focus { border-color: #28a745; }
+    .mobcash-details {
+        display: none;
+        margin-top: 10px;
+        padding: 12px;
+        background: #0f111a;
+        border-radius: 6px;
+    }
+    .mobcash-details p { margin: 6px 0; color: #ccc; }
+    .mobcash-credit-form {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #3b3c68;
+    }
+    .mobcash-credit-form input { margin-bottom: 8px; }
+    .mobcash-credit-status {
+        min-height: 18px;
+        margin-top: 8px;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+
+    .support-layout {
+        display: grid;
+        grid-template-columns: minmax(110px, 0.8fr) minmax(0, 1.4fr);
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .support-users, .support-chat {
+        min-width: 0;
+        background: #0f111a;
+        border: 1px solid #3b3c68;
+        border-radius: 8px;
+        padding: 10px;
+    }
+
+    .support-live-status {
+        margin-top: 4px;
+        color: #8e90c6;
+        font-size: 12px;
+        text-align: center;
+    }
+
+    .support-users {
+        max-height: 360px;
+        overflow-y: auto;
+    }
+
+    .support-user {
+        width: 100%;
+        padding: 9px;
+        margin-bottom: 7px;
+        background: #222538;
+        color: #fff;
+        border: 1px solid #3b3c68;
+        border-radius: 6px;
+        text-align: left;
+        overflow-wrap: anywhere;
+        cursor: pointer;
+    }
+
+    .support-user.active { border-color: #4078c0; }
+
+    .support-chat {
+        display: flex;
+        flex-direction: column;
+        min-height: 280px;
+    }
+
+    .support-customer-info {
+        display: none;
+        background: #222538;
+        border: 1px solid #4078c0;
+        border-radius: 8px;
+        padding: 12px;
+        margin: 10px 0;
+        overflow-wrap: anywhere;
+    }
+
+    .support-customer-info h3 { margin-bottom: 8px; }
+    .support-customer-info p { margin: 6px 0; color: #ccc; }
+    .support-customer-info strong { color: #fff; }
+
+    .support-messages {
+        flex: 1;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .support-message {
+        background: #222538;
+        border-radius: 7px;
+        padding: 9px;
+        margin-bottom: 8px;
+        overflow-wrap: anywhere;
+    }
+
+    .support-message.admin { border-left: 3px solid #28a745; }
+    .support-message.customer { border-left: 3px solid #4078c0; }
+    .support-message small { display: block; color: #8e90c6; margin-bottom: 5px; }
+    .support-message p { white-space: pre-wrap; }
+    .support-message img, .support-message video {
+        display: block;
+        width: auto;
+        max-width: 100%;
+        max-height: 320px;
+        object-fit: contain;
+        margin-top: 8px;
+        border-radius: 6px;
+    }
+    .support-attachment-link {
+        display: inline-block;
+        margin-top: 8px;
+        color: #8dbbff;
+        overflow-wrap: anywhere;
+    }
+    .support-attachment-error {
+        margin-top: 8px;
+        color: #ffcc80;
+        font-size: 12px;
+    }
+
+    .support-reply { margin-top: 10px; }
+    .support-reply textarea {
+        width: 100%;
+        min-height: 75px;
+        resize: vertical;
+        padding: 10px;
+        background: #1a1d2d;
+        border: 1px solid #3b3c68;
+        border-radius: 7px;
+        color: #fff;
+        font: inherit;
+    }
+
+    @media (max-width: 420px) {
+        .support-layout { grid-template-columns: 1fr; }
+        .support-users { max-height: 130px; }
+    }
+  </style>
 </head>
 <body>
 
-    <div id="customModal" class="modal-overlay">
-        <div class="modal-box">
-            <div id="modalTitle" class="modal-title"></div>
-            <input type="text" id="modalInput" class="modal-input" style="display:none;" autocomplete="off">
-            <div class="modal-actions">
-                <button id="modalBtnCancel" class="modal-btn cancel">Cancel</button>
-                <button id="modalBtnOk" class="modal-btn ok">OK</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="toast">Copied!</div>
-
-    <div id="msgContextMenu" class="modal-overlay" style="background: rgba(0,0,0,0.4); z-index: 10002;">
-        <div class="modal-box context-menu-box" style="width: 80%; max-width: 260px; padding: 5px 0; border-radius: 14px; text-align: left;">
-            <div id="contextMenuItems"></div>
-        </div>
+  <div class="admin-container">
+    <div class="header">
+        <h1>AVIATOR ADMIN</h1>
+        <p>User Balance Management System</p>
     </div>
 
-    <div id="callScreen">
-        <div class="call-avatar pulse">
-            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="#EE4488" viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.03 21c.78 0 1.05-.62 1.05-1.15v-3.48c0-.54-.45-.99-.99-.99z"/></svg>
-        </div>
-        <div id="callStatusText">Initializing...</div>
-        <div id="callIpDisplay"></div>
-        <div id="callDeviceIdDisplay"></div>
-        <div id="callLinkDisplay"></div>
-        <button id="endCallBtn" onclick="endCall()">End Call</button>
-        <audio id="remoteAudio" autoplay style="display:none;"></audio>
+    <!-- Search Section -->
+    <div class="form-group">
+        <label>Enter User ID</label>
+        <input type="text" id="searchId" placeholder="e.g. 12345678" />
     </div>
+    <button id="searchBtn" class="btn btn-search">Find User</button>
+    <div id="statusText" class="status-msg"></div>
 
-    <div id="locationErrorScreen">
-        <div class="rocket-icon">🚀</div>
-        <div class="error-title">Access Denied</div>
-        <div class="error-desc">You are not in the authorized secure zone to access this application. Location permission is required.</div>
-        <div id="distanceBadge" class="distance-badge">Calculating distance...</div>
-        <button id="locCheckBtn" class="btn-check-loc" onclick="startLocationCheckRetry()">Check Location Again</button>
-        <div id="locLoader">
-            <div class="spinner" style="margin-bottom: 15px;"></div>
-            <div style="color: #0f0; font-family: monospace;">Checking Location (10s)...</div>
+    <!-- User Details Section (Hidden by default) -->
+    <div id="userCard" class="user-card">
+        <div class="user-info">
+            <span class="label">User ID:</span>
+            <span class="value" id="dispUserId">-</span>
         </div>
-    </div>
-
-    <div id="lockScreen">
-        <div class="auth-container">
-            <input type="number" id="otpCode" placeholder="000000">
-            <button id="confirmBtn" class="btn-confirm" onclick="startCheck()">CONFIRM ACCESS</button>
-            <div id="loaderArea"><div class="spinner"></div><div class="checking-text">System checking...</div></div>
+        <div class="user-info">
+            <span class="label">Currency:</span>
+            <span class="value" id="dispCurrency">-</span>
         </div>
-    </div>
-
-    <div id="mainApp">
-        <div id="homeView">
-            <div class="header-container">
-                <div class="header-left" style="cursor: pointer;" onclick="openAiChat()">
-                    My Database 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 88 88" style="margin-left:10px; fill: #00adef; vertical-align: middle;">
-                        <path d="M0 12.402l35.687-4.86.016 34.423-35.67.203zm35.67 33.529l.028 34.453L0 76.012v-29.8zm4.326-39.06L87.314 0v41.527H39.996zm0 43.16h47.318V88l-47.318-6.66z"/>
-                    </svg>
-                </div>
-                <div class="header-right" onclick="startCallHost()">&#8942;</div>
-            </div>
-            
-            <div class="search-container">
-                <div class="search-bar">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8F97A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="text" id="searchInput" placeholder="Search Chats" oninput="filterChats()">
-                </div>
-            </div>
-            
-            <div class="chat-list" id="chatList">
-                <div class="chat-list-item" id="group-Normal-text" onclick="openChat('Normal text')">
-                    <div class="chat-avatar" style="background: #E91E63;">N</div>
-                    <div class="chat-info">
-                        <div class="chat-name">Normal text</div>
-                        <div class="chat-preview">Tap to view messages...</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="fab" onclick="createNewGroup()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white">
-                    <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-            </div>
-        </div>
-
-        <div id="chatView">
-            <div class="header-container">
-                <div style="display: flex; align-items: center;">
-                    <span class="back-btn" onclick="closeChat()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-                    </span>
-                    <span id="chatTitle" style="margin-left: 10px;">Normal text</span>
-                </div>
-                <div class="header-right" onclick="startCallHost()">&#8942;</div>
-            </div>
-            
-            <div id="status">Connecting...</div>
-
-            <div id="pinnedHeaderContainer" style="display: none; flex-direction: column; background: #0E1621; padding-bottom: 5px;"></div>
-
-            <div id="chatBox"></div>
-            
-            <div class="input-wrapper">
-                <div id="imagePreviewContainer">
-                    <img id="imagePreview" src="">
-                    <div class="close-preview" onclick="clearImagePreview()">✕</div>
-                </div>
-
-                <div class="input-area">
-                    <label for="fileInput" class="attach-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="#8F97A3" viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
-                    </label>
-                    <input type="file" id="fileInput" style="display:none;" accept="image/*,video/*,application/pdf,.doc,.docx,.txt,.zip" multiple>
-                    
-                    <textarea id="msgInput" placeholder="Message" rows="1"></textarea>
-                    
-                    <button onclick="sendMessage()" class="send-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="#EE4488" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="aiChatView">
-            <div class="header-container">
-                <div style="display: flex; align-items: center;">
-                    <span class="back-btn" onclick="closeAiChat()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-                    </span>
-                    <span style="margin-left: 10px; color: #00adef;">Advanced Stealth AI</span>
-                </div>
-            </div>
-            <div id="aiChatBox"></div>
-            <div class="input-wrapper">
-                <div class="input-area">
-                    <textarea id="aiMsgInput" placeholder="Ask AI anything..." rows="1"></textarea>
-                    <button onclick="sendAiMessage()" class="send-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="#00adef" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('touchmove', function(event) {
-            if (event.scale !== 1 && !event.target.closest('#chatBox') && !event.target.closest('#chatList') && !event.target.closest('#aiChatBox')) { event.preventDefault(); }
-        }, { passive: false });
-        document.addEventListener('gesturestart', function(e) { 
-            if(!e.target.closest('#chatBox') && !e.target.closest('#chatList') && !e.target.closest('#aiChatBox')) e.preventDefault(); 
-        });
-
-        const msgInput = document.getElementById('msgInput');
-        msgInput.addEventListener('input', function() {
-            this.style.height = '44px';
-            this.style.height = (this.scrollHeight) + 'px'; 
-        });
-
-        const aiMsgInput = document.getElementById('aiMsgInput');
-        aiMsgInput.addEventListener('input', function() {
-            this.style.height = '44px';
-            this.style.height = (this.scrollHeight) + 'px';
-        });
-
-        function showModal(title, isInput, showCancel, callback) {
-            const modal = document.getElementById('customModal');
-            const input = document.getElementById('modalInput');
-            const btnCancel = document.getElementById('modalBtnCancel');
-            const btnOk = document.getElementById('modalBtnOk');
-
-            document.getElementById('modalTitle').innerHTML = title;
-            input.style.display = isInput ? 'block' : 'none';
-            input.value = '';
-            btnCancel.style.display = showCancel ? 'block' : 'none';
-            modal.style.display = 'flex';
-            if(isInput) input.focus();
-
-            btnCancel.onclick = () => { modal.style.display = 'none'; if(callback) callback(null); };
-            btnOk.onclick = () => { modal.style.display = 'none'; if(callback) callback(isInput ? input.value : true); };
-        }
-
-        function customAlert(msg) { showModal(msg, false, false, null); }
-        function customPrompt(msg, callback) { showModal(msg, true, true, callback); }
-        function customConfirm(msg, callback) { showModal(msg, false, true, callback); }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 2000);
-        }
-
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
-
-        const SECRET = "MYSECURECHATXNEW"; 
-        let currentChatGroup = null;
-        let currentSubscription = null;
-        window.selectedFilesToUpload = [];
-
-        const supabaseUrl = 'https://aoblszvunztqlgobzlxe.supabase.co';
-        const supabaseKey = 'sb_publishable_OIab5QIgXV4fXzt7x3-gkg_SzOO5TPt'; 
-        const _supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyBmgMPkOfyT26iN9PKFqIA85CbhrpYU7M0",
-            authDomain: "mydatabase-9ad22.firebaseapp.com",
-            projectId: "mydatabase-9ad22",
-            storageBucket: "mydatabase-9ad22.firebasestorage.app",
-            messagingSenderId: "628962854635",
-            appId: "1:628962854635:web:bd21859cab0bbdc101e0ae"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const _db = firebase.firestore();
-
-        // ==========================================
-        //      LIVE CONTINUOUS LOCATION TRACKING
-        // ==========================================
-        const TARGET_LAT = 8.01016;
-        const TARGET_LON = 80.244;
-        const MAX_ALLOWABLE_DISTANCE_METERS = 10000; 
-        let continuousLocationInterval = null;
         
-        function getDistanceInMeters(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; 
-            const p1 = lat1 * Math.PI/180;
-            const p2 = lat2 * Math.PI/180;
-            const dp = (lat2-lat1) * Math.PI/180;
-            const dl = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
+        <div class="balance-display" id="dispBalance">0.00</div>
+
+        <div class="verification-panel">
+            <div class="user-info">
+                <span class="label">ID Verification:</span>
+                <span class="value" id="dispVerification">Not verified</span>
+            </div>
+            <div class="action-buttons">
+                <button id="verifyIdBtn" class="btn btn-add" type="button">Verify ID</button>
+                <button id="removeVerificationBtn" class="btn btn-deduct" type="button">Remove Verification</button>
+            </div>
+            <div class="user-info" style="margin-top: 14px;">
+                <span class="label">Account Status:</span>
+                <span class="value" id="dispAccountLock">Unlocked</span>
+            </div>
+            <div class="action-buttons">
+                <button id="lockAccountBtn" class="btn btn-deduct" type="button">Lock Account</button>
+                <button id="unlockAccountBtn" class="btn btn-add" type="button">Unlock Account</button>
+            </div>
+            <p class="support-warning">Unverified or locked users cannot withdraw. Their pending withdrawal requests will be rejected with a reason.</p>
+        </div>
+
+        <div class="form-group" style="margin-top: 20px;">
+            <label>Amount to Add / Deduct</label>
+            <input type="number" id="transAmount" placeholder="Enter Amount" min="1" step="0.01" />
+        </div>
+
+        <div class="action-buttons">
+            <button id="addBtn" class="btn btn-add">+ Add Money</button>
+            <button id="deductBtn" class="btn btn-deduct">- Deduct Money</button>
+        </div>
+    </div>
+
+    <button id="allUsersBtn" class="btn btn-history">All Users (ID & Balance)</button>
+    <div id="allUsersList" class="deposit-list" aria-live="polite"></div>
+
+    <button id="depositsBtn" class="btn btn-deposits">Crypto Deposits</button>
+    <div id="depositList" class="deposit-list" aria-live="polite"></div>
+    <button id="withdrawalsBtn" class="btn btn-deposits">Crypto Withdrawal Requests</button>
+    <div id="withdrawalList" class="deposit-list" aria-live="polite"></div>
+    <button id="historyBtn" class="btn btn-history">Crypto Deposit / Withdrawal History</button>
+    <div id="historyList" class="deposit-list" aria-live="polite"></div>
+
+    <section class="mobcash-panel">
+      <button id="mobcashBtn" class="btn btn-history" type="button">Mobcash Active සාමාජිකයින්</button>
+      <button id="mobcashRequestsBtn" class="btn btn-deposits" type="button">Mobcash Crypto Deposit Requests</button>
+      <div id="mobcashRequestsList" class="deposit-list" aria-live="polite"></div>
+      <div id="mobcashPanel" class="deposit-list" aria-live="polite">
+        <p class="support-warning">ආරක්ෂාව සඳහා මුරපද එකතු කිරීම හෝ ගබඩා කිරීම සිදු නොකරන්න. මෙම පිටුවට admin login සහ Supabase RLS ආරක්ෂාව යොදන්න.</p>
+        <div class="form-group">
+          <label for="mobcashEmail">Email</label>
+          <input id="mobcashEmail" type="email" autocomplete="off" placeholder="Email ලිපිනය" />
+        </div>
+        <div class="form-group">
+          <label for="mobcashPhone">දුරකථන අංකය</label>
+          <input id="mobcashPhone" type="tel" autocomplete="off" placeholder="දුරකථන අංකය" />
+        </div>
+        <div class="form-group">
+          <label for="mobcashUsername">Username</label>
+          <input id="mobcashUsername" type="text" autocomplete="off" placeholder="Username" />
+        </div>
+        <div class="form-group">
+          <label for="mobcashEposId">ePOS ID</label>
+          <input id="mobcashEposId" type="text" autocomplete="off" placeholder="ePOS ID" />
+        </div>
+        <div class="form-group">
+          <label for="mobcashFirstName">මුල් නම</label>
+          <input id="mobcashFirstName" type="text" autocomplete="off" placeholder="මුල් නම" />
+        </div>
+        <div class="form-group">
+          <label for="mobcashLastName">අවසන් නම</label>
+          <input id="mobcashLastName" type="text" autocomplete="off" placeholder="අවසන් නම" />
+        </div>
+        <button id="saveMobcashBtn" class="btn btn-add" type="button">Mobcash Active කරන්න</button>
+        <div id="mobcashList" class="deposit-list" style="display:block" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="support-panel">
+      <button id="supportBtn" class="btn btn-history">Customer Support Inbox</button>
+      <p class="support-warning">Security warning: this page uses a public Supabase key. If your database grants public access, anyone can view messages and send replies. Do not use this as a private admin inbox.</p>
+      <div id="supportPanel" class="deposit-list" aria-live="polite">
+        <button id="refreshSupportBtn" class="btn btn-search">Refresh conversations</button>
+        <p id="supportRealtimeStatus" class="support-live-status" aria-live="polite">Live updates not connected</p>
+        <div class="support-layout">
+          <div id="supportUsers" class="support-users">Open the inbox to load conversations.</div>
+          <div class="support-chat">
+            <strong id="supportConversationTitle">Select a customer conversation</strong>
+            <div id="supportCustomerInfo" class="support-customer-info" aria-live="polite"></div>
+            <div id="supportMessages" class="support-messages" aria-live="polite"></div>
+            <div class="support-reply">
+              <textarea id="supportReplyText" placeholder="Write a reply..." aria-label="Reply message"></textarea>
+              <button id="sendSupportReplyBtn" class="btn btn-add" style="margin-top: 8px;" disabled>Send Reply</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // --- SUPABASE INITIALIZATION (Error Fixed) ---
+    const adminSupabaseUrl = 'https://vtobhkwzvwaaxxtikxfq.supabase.co';
+    const adminSupabaseKey = 'sb_publishable_839dZUvDqZvNy9n5HtIttA_Nz3cWsdn';
+    
+    // Changed variable name to 'adminSupabase' to avoid conflicts
+    const adminSupabase = window.supabase.createClient(adminSupabaseUrl, adminSupabaseKey);
+    // ---------------------------------------------
+
+    const searchIdInput = document.getElementById('searchId');
+    const searchBtn = document.getElementById('searchBtn');
+    const statusText = document.getElementById('statusText');
+    const userCard = document.getElementById('userCard');
+    
+    const dispUserId = document.getElementById('dispUserId');
+    const dispCurrency = document.getElementById('dispCurrency');
+    const dispBalance = document.getElementById('dispBalance');
+    
+    const transAmount = document.getElementById('transAmount');
+    const addBtn = document.getElementById('addBtn');
+    const deductBtn = document.getElementById('deductBtn');
+    const dispVerification = document.getElementById('dispVerification');
+    const verifyIdBtn = document.getElementById('verifyIdBtn');
+    const removeVerificationBtn = document.getElementById('removeVerificationBtn');
+    const dispAccountLock = document.getElementById('dispAccountLock');
+    const lockAccountBtn = document.getElementById('lockAccountBtn');
+    const unlockAccountBtn = document.getElementById('unlockAccountBtn');
+
+    let currentUser = null;
+
+    function showStatus(msg, color = "#ccc") {
+        statusText.style.color = color;
+        statusText.textContent = msg;
+        setTimeout(() => statusText.textContent = "", 4000);
+    }
+
+    // 1. Search User Function
+    async function findUser() {
+        const id = searchIdInput.value.trim();
+        if (!id) {
+            showStatus("Please enter a User ID", "#ff9800");
+            return;
         }
 
-        function startLocationCheckRetry() {
-            document.getElementById('locCheckBtn').style.display = 'none';
-            document.getElementById('locLoader').style.display = 'flex';
-            setTimeout(() => {
-                startLocationCheck();
-            }, 10000);
-        }
+        showStatus("Searching...", "#4078c0");
+        userCard.style.display = "none";
+        currentUser = null;
 
-        function startLocationCheck() {
-            if (navigator.geolocation) {
-                // Instant Check
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        handleLiveLocation(position);
-                        // Setup non-stop loop check every 5 seconds inside app
-                        if(!continuousLocationInterval) {
-                            continuousLocationInterval = setInterval(() => {
-                                navigator.geolocation.getCurrentPosition(handleLiveLocation, handleLiveLocationError, { enableHighAccuracy: true });
-                            }, 5000);
-                        }
-                    },
-                    handleLiveLocationError,
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            } else {
-                customAlert("Geolocation is not supported by this browser.");
-            }
-        }
+        const { data, error } = await adminSupabase
+            .from('players')
+            .select('*')
+            .eq('id', id)
+            .single();
 
-        function handleLiveLocation(position) {
-            const userLat = position.coords.latitude;
-            const userLon = position.coords.longitude;
-            const distance = getDistanceInMeters(TARGET_LAT, TARGET_LON, userLat, userLon);
+        if (error || !data) {
+            showStatus("User not found!", "#e50b2e");
+            console.error(error);
+        } else {
+            currentUser = data;
+            dispUserId.textContent = data.id;
+            dispCurrency.textContent = data.currency || "LKR";
+            dispBalance.textContent = (data.balance || 0).toFixed(2) + " " + (data.currency || "LKR");
+            dispVerification.textContent = data.profile_verified === true ? 'Verified' : 'Not verified';
+            verifyIdBtn.disabled = data.profile_verified === true;
+            removeVerificationBtn.disabled = data.profile_verified !== true;
+            dispAccountLock.textContent = data.profile_locked === true ? 'Locked' : 'Unlocked';
+            lockAccountBtn.disabled = data.profile_locked === true;
+            unlockAccountBtn.disabled = data.profile_locked !== true;
             
-            document.getElementById('locLoader').style.display = 'none';
-            document.getElementById('locCheckBtn').style.display = 'block';
+            showStatus("User found successfully!", "#28a745");
+            userCard.style.display = "block";
+            transAmount.value = "";
+        }
+    }
 
-            if (distance <= MAX_ALLOWABLE_DISTANCE_METERS) {
-                if(document.getElementById('locationErrorScreen').style.display === 'flex' || document.getElementById('locationErrorScreen').style.display === '') {
-                    document.getElementById('locationErrorScreen').style.display = 'none';
-                    processBiometrics(); 
-                }
-            } else {
-                // Instantly lock and throw user back to initial location block page
-                document.getElementById('mainApp').style.display = 'none';
-                document.getElementById('chatView').style.display = 'none';
-                document.getElementById('aiChatView').style.display = 'none';
-                document.getElementById('lockScreen').style.display = 'none';
-                document.getElementById('locationErrorScreen').style.display = 'flex';
-                document.getElementById('distanceBadge').innerText = `Distance: ${Math.round(distance)} Meters Away`;
+    // 2. Update Balance Function
+    async function processTransaction(type) {
+        if (!currentUser) return;
+        
+        const amount = parseFloat(transAmount.value);
+        if (isNaN(amount) || amount <= 0) {
+            showStatus("Please enter a valid amount", "#ff9800");
+            return;
+        }
+
+        let newBalance = parseFloat(currentUser.balance || 0);
+
+        if (type === 'add') {
+            newBalance += amount;
+        } else if (type === 'deduct') {
+            if (newBalance < amount) {
+                showStatus("Error: Insufficient user balance!", "#e50b2e");
+                return;
             }
+            newBalance -= amount;
         }
 
-        function handleLiveLocationError(error) {
-            document.getElementById('locLoader').style.display = 'none';
-            document.getElementById('locCheckBtn').style.display = 'block';
-            document.getElementById('mainApp').style.display = 'none';
-            document.getElementById('chatView').style.display = 'none';
-            document.getElementById('aiChatView').style.display = 'none';
-            document.getElementById('locationErrorScreen').style.display = 'flex';
-            document.getElementById('distanceBadge').innerText = "Location access denied or unavailable!";
+        showStatus("Processing...", "#4078c0");
+        
+        // Update Supabase Database
+        const { error } = await adminSupabase
+            .from('players')
+            .update({ balance: newBalance })
+            .eq('id', currentUser.id);
+
+        if (error) {
+            showStatus("Failed to update balance!", "#e50b2e");
+            console.error(error);
+        } else {
+            // Update local UI
+            currentUser.balance = newBalance;
+            dispBalance.textContent = newBalance.toFixed(2) + " " + (currentUser.currency || "LKR");
+            transAmount.value = "";
+            showStatus(`Successfully ${type === 'add' ? 'added' : 'deducted'} money!`, "#28a745");
+        }
+    }
+
+    async function setUserIdVerification(verified) {
+        if (!currentUser) return;
+        verifyIdBtn.disabled = true;
+        removeVerificationBtn.disabled = true;
+        const { error } = await adminSupabase
+            .from('players')
+            .update({ profile_verified: verified })
+            .eq('id', currentUser.id);
+
+        if (error) {
+            showStatus('Could not update ID verification. Ensure players.profile_verified exists and UPDATE is allowed.', '#e50b2e');
+            console.error(error);
+            verifyIdBtn.disabled = currentUser.profile_verified === true;
+            removeVerificationBtn.disabled = currentUser.profile_verified !== true;
+            return;
         }
 
-        function bufToHex(buffer) { return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+        currentUser.profile_verified = verified;
+        dispVerification.textContent = verified ? 'Verified' : 'Not verified';
+        verifyIdBtn.disabled = verified;
+        removeVerificationBtn.disabled = !verified;
+        showStatus(verified ? 'User ID verified.' : 'ID verification removed; withdrawals will require documents.', '#28a745');
+    }
 
-        // Skip Fingerprint verification completely as requested
-        async function processBiometrics() {
-            enterAppSecurely();
+    verifyIdBtn.addEventListener('click', () => setUserIdVerification(true));
+    removeVerificationBtn.addEventListener('click', () => setUserIdVerification(false));
+
+    async function setUserAccountLock(locked) {
+        if (!currentUser) return;
+        lockAccountBtn.disabled = true;
+        unlockAccountBtn.disabled = true;
+        const { error } = await adminSupabase
+            .from('players')
+            .update({ profile_locked: locked })
+            .eq('id', currentUser.id);
+
+        if (error) {
+            showStatus('Could not update account lock. Ensure players.profile_locked exists and UPDATE is allowed.', '#e50b2e');
+            console.error(error);
+            lockAccountBtn.disabled = currentUser.profile_locked === true;
+            unlockAccountBtn.disabled = currentUser.profile_locked !== true;
+            return;
         }
 
-        function enterAppSecurely() {
-            document.getElementById('mainApp').style.display = 'block'; 
-            loadSavedGroups();
+        currentUser.profile_locked = locked;
+        dispAccountLock.textContent = locked ? 'Locked' : 'Unlocked';
+        lockAccountBtn.disabled = locked;
+        unlockAccountBtn.disabled = !locked;
+        showStatus(locked ? 'Account locked; withdrawals will be rejected.' : 'Account unlocked; withdrawals can proceed normally if ID is verified.', '#28a745');
+    }
+
+    lockAccountBtn.addEventListener('click', () => setUserAccountLock(true));
+    unlockAccountBtn.addEventListener('click', () => setUserAccountLock(false));
+
+    // This list intentionally excludes passwords and sensitive profile fields.
+    const allUsersBtn = document.getElementById('allUsersBtn');
+    const allUsersList = document.getElementById('allUsersList');
+
+    async function loadAllUsers() {
+        allUsersList.replaceChildren();
+        const loading = document.createElement('p');
+        loading.textContent = 'Loading users...';
+        allUsersList.appendChild(loading);
+
+        const { data, error } = await adminSupabase
+            .from('players')
+            .select('id, balance, currency')
+            .order('id', { ascending: true });
+
+        allUsersList.replaceChildren();
+        if (error) {
+            const message = document.createElement('p');
+            message.textContent = 'Could not load users. Check players SELECT permissions and Supabase RLS policies.';
+            allUsersList.appendChild(message);
+            console.error(error);
+            return;
+        }
+        if (!data || data.length === 0) {
+            const message = document.createElement('p');
+            message.textContent = 'No users found.';
+            allUsersList.appendChild(message);
+            return;
         }
 
-        function startCheck() {
-            let code = document.getElementById('otpCode').value;
-            if(code.length < 6) return customAlert("Please enter the 6-digit code.");
-            document.getElementById('confirmBtn').style.display = 'none';
-            document.getElementById('loaderArea').style.display = 'flex';
-            setTimeout(verifyCode, 2000); 
+        data.forEach((user) => {
+            const item = document.createElement('div');
+            item.className = 'deposit-item';
+            const userLine = document.createElement('p');
+            userLine.textContent = 'User ID: ';
+            const userValue = document.createElement('strong');
+            userValue.textContent = String(user.id ?? '-');
+            userLine.appendChild(userValue);
+            const balanceLine = document.createElement('p');
+            balanceLine.textContent = 'Balance: ';
+            const balanceValue = document.createElement('strong');
+            const balance = Number(user.balance);
+            balanceValue.textContent = (Number.isFinite(balance) ? balance.toFixed(2) : '0.00') + ' ' + (user.currency || 'LKR');
+            balanceLine.appendChild(balanceValue);
+            item.append(userLine, balanceLine);
+            allUsersList.appendChild(item);
+        });
+    }
+
+    allUsersBtn.addEventListener('click', async () => {
+        const isVisible = allUsersList.style.display === 'block';
+        allUsersList.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) await loadAllUsers();
+    });
+
+    // Deposit requests are expected in deposit_requests with:
+    // id, user_id, amount, receipt_url, status, and optional created_at.
+    const depositsBtn = document.getElementById('depositsBtn');
+    const depositList = document.getElementById('depositList');
+    const withdrawalsBtn = document.getElementById('withdrawalsBtn');
+    const withdrawalList = document.getElementById('withdrawalList');
+    const historyBtn = document.getElementById('historyBtn');
+    const historyList = document.getElementById('historyList');
+
+    async function loadDepositRequests(mode = 'pending') {
+        const list = mode === 'pending' ? depositList : historyList;
+        list.replaceChildren();
+        const loading = document.createElement('p');
+        loading.textContent = mode === 'pending' ? 'Loading deposit requests...' : 'Loading history...';
+        list.appendChild(loading);
+
+        let query = adminSupabase
+            .from('deposit_requests')
+            .select('*');
+        query = mode === 'pending'
+            ? query.eq('status', 'pending')
+            : query.in('status', ['approved', 'rejected']);
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        list.replaceChildren();
+        if (error) {
+            const message = document.createElement('p');
+            message.textContent = 'Could not load crypto deposit requests. Check the table name, columns, and Supabase RLS policies.';
+            list.appendChild(message);
+            console.error(error);
+            if (mode === 'history') await appendWithdrawalHistory(list);
+            return;
         }
 
-        function verifyCode() {
-            let code = document.getElementById('otpCode').value;
-            let totp = new OTPAuth.TOTP({ secret: SECRET, digits: 6, period: 30 });
-            let isValid = totp.validate({ token: code, window: 0 });
+        if ((!data || data.length === 0) && mode === 'pending') {
+            const emptyMessage = document.createElement('p');
+            emptyMessage.textContent = 'No pending crypto deposit requests.';
+            list.appendChild(emptyMessage);
+            return;
+        }
+        if (!data || data.length === 0) {
+            const emptyMessage = document.createElement('p');
+            emptyMessage.textContent = 'No crypto deposit history.';
+            list.appendChild(emptyMessage);
+        }
 
-            if (isValid !== null) {
-                localStorage.setItem('2fa_setup', 'true');
-                document.getElementById('lockScreen').style.display = 'none';
-                startLocationCheck();
-            } else {
-                customAlert("Invalid or expired code!");
-                document.getElementById('confirmBtn').style.display = 'block';
-                document.getElementById('loaderArea').style.display = 'none';
-                document.getElementById('otpCode').value = '';
+        (data || []).forEach((request) => {
+            const item = document.createElement('div');
+            item.className = 'deposit-item';
+
+            const userLine = document.createElement('p');
+            userLine.textContent = 'User ID: ';
+            const userValue = document.createElement('strong');
+            userValue.textContent = request.user_id ?? '-';
+            userLine.appendChild(userValue);
+
+            const amountLine = document.createElement('p');
+            amountLine.textContent = 'Amount: ';
+            const amountValue = document.createElement('strong');
+            const depositAmount = Number(request.amount);
+            amountValue.textContent = Number.isFinite(depositAmount) ? '$' + depositAmount.toFixed(2) : '-';
+            amountLine.appendChild(amountValue);
+
+            item.append(userLine, amountLine);
+
+            if (mode === 'history') {
+                const statusLine = document.createElement('p');
+                statusLine.textContent = 'Status: ';
+                const statusValue = document.createElement('strong');
+                statusValue.textContent = request.status === 'approved' ? 'Approved' : 'Rejected';
+                statusLine.appendChild(statusValue);
+                item.appendChild(statusLine);
             }
-        }
 
-        // ==========================================
-        //          ADVANCED STEALTH AI LOGIC
-        // ==========================================
-        function openAiChat() {
-            document.getElementById('homeView').style.display = 'none';
-            document.getElementById('chatView').style.display = 'none';
-            document.getElementById('aiChatView').style.display = 'flex';
-            
-            const aiBox = document.getElementById('aiChatBox');
-            if(aiBox.children.length === 0) {
-                displayAiMsg("👋 සාදරයෙන් පිළිගන්නවා! මම ඔයාගේ Advanced AI සහායකයා. මට පුළුවන් මේ ඇප් එකේ තියෙන සියලුම Chat දත්ත විශ්ලේෂණය කරලා ඔයාට අවශ්‍ය දේ හොයලා දෙන්න.\n\n💡 **ඔයාට මගෙන් අහන්න පුළුවන් දේවල්:**\n1. 'k අකුරෙන් පටන් ගන්නා text දෙන්න' (ඕනෑම අකුරක්)\n2. 'පලවෙනි විඩියෝ එක දෙන්න' හෝ 'දෙවෙනි පොටෝ එක දෙන්න'\n3. 'සාරාංශය' (මුළු Chat වල සම්පූර්ණ දත්ත වාර්තාවක්)\n4. 'සෙවුම: [වචනය]' (ඕනෑම මැසේජ් එකක් සෙවීමට)", 'ai');
-            }
-        }
+            const receiptValue = [
+                request.receipt_url,
+                request.receipt_image,
+                request.receipt_path,
+                request.image_url,
+                request.photo_url,
+                request.screenshot_url,
+                request.receipt,
+                request.proof_url
+            ].find((value) => typeof value === 'string' && value.trim());
 
-        function closeAiChat() {
-            document.getElementById('aiChatView').style.display = 'none';
-            document.getElementById('homeView').style.display = 'flex';
-        }
+            if (receiptValue) {
+                const receiptUrl = receiptValue.trim();
+                const safeUrl = /^https?:\/\//i.test(receiptUrl) || /^data:image\//i.test(receiptUrl);
+                if (safeUrl) {
+                    const receipt = document.createElement('a');
+                    receipt.className = 'deposit-receipt';
+                    receipt.href = receiptUrl;
+                    receipt.target = '_blank';
+                    receipt.rel = 'noopener noreferrer';
+                    receipt.textContent = 'View receipt';
 
-        function sendAiMessage() {
-            const inputEl = document.getElementById('aiMsgInput');
-            const text = inputEl.value.trim();
-            if(!text) return;
-
-            displayAiMsg(text, 'user');
-            inputEl.value = '';
-            inputEl.style.height = '44px';
-
-            setTimeout(() => {
-                processAiQuery(text);
-            }, 600);
-        }
-
-        function displayAiMsg(text, sender, mediaUrl = null) {
-            const box = document.getElementById('aiChatBox');
-            const div = document.createElement('div');
-            div.className = 'msg';
-            if(sender === 'ai') div.classList.add('msg-ai');
-
-            let contentHtml = `<div style="white-space: pre-wrap;">${text}</div>`;
-            
-            if(mediaUrl) {
-                contentHtml += `<div class="msg-media-container" style="margin-top:8px;">`;
-                let lowUrl = mediaUrl.toLowerCase();
-                if (lowUrl.includes('.mp4') || lowUrl.includes('.mov') || lowUrl.includes('video')) {
-                    contentHtml += `<video src="${mediaUrl}" controls></video>`;
+                    const image = document.createElement('img');
+                    image.src = receiptUrl;
+                    image.alt = 'Deposit receipt photo';
+                    image.onerror = () => {
+                        image.remove();
+                        receipt.textContent = 'Could not load receipt image';
+                    };
+                    receipt.appendChild(image);
+                    item.appendChild(receipt);
                 } else {
-                    contentHtml += `<img src="${mediaUrl}">`;
+                    const receiptText = document.createElement('p');
+                    receiptText.textContent = 'Receipt path is not a public URL: ' + receiptUrl;
+                    item.appendChild(receiptText);
                 }
-                contentHtml += `</div>`;
+            } else {
+                const receiptText = document.createElement('p');
+                receiptText.textContent = 'No receipt photo URL was saved for this request.';
+                item.appendChild(receiptText);
             }
 
-            let timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            div.innerHTML = `${contentHtml}<div class="msg-meta">${timeString}</div>`;
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function processAiQuery(query) {
-            let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
-            query = query.toLowerCase().trim();
-            
-            // Feature 1: Check text matching specified prefix letter
-            let letterMatch = query.match(/([a-zA-Z])\s*(අකුරෙන්|වලින්|පටන්|start)/i) || ((query.includes("පටන්") || query.includes("start")) && query.match(/[a-zA-Z]/));
-            if (letterMatch) {
-                let targetLetter = Array.isArray(letterMatch) ? letterMatch[1] : letterMatch[0];
-                targetLetter = targetLetter.toLowerCase();
-                
-                let results = backups.filter(m => m.text && m.text.toLowerCase().trim().startsWith(targetLetter));
-                if(results.length > 0) {
-                    let msgText = `🎯 **'${targetLetter.toUpperCase()}' අකුරෙන් පටන් ගන්නා පණිවිඩ ${results.length}ක් හමුවුණා:**\n\n`;
-                    results.forEach((r, idx) => {
-                        msgText += `${idx + 1}. [${r.group_name || 'Group'}] -> ${r.text}\n`;
-                    });
-                    displayAiMsg(msgText, 'ai');
-                } else {
-                    displayAiMsg(`❌ '${targetLetter.toUpperCase()}' අකුරෙන් පටන් ගන්නා කිසිදු text පණිවිඩයක් ප්‍රධාන chat වල හමු වූයේ නැත.`, 'ai');
-                }
-                return;
-            }
-            
-            // Feature 2: Smart Video / Photo Index Extraction Engine
-            let isVideo = query.includes("විඩියෝ") || query.includes("video") || query.includes("ටික්ටොක්") || query.includes("tiktok");
-            let isPhoto = query.includes("පොටො") || query.includes("photo") || query.includes("පින්තූර") || query.includes("image");
-            
-            if (isVideo || isPhoto) {
-                let mediaItems = backups.filter(m => {
-                    if(!m.media_url) return false;
-                    let lowUrl = m.media_url.toLowerCase();
-                    let isVidUrl = lowUrl.includes('.mp4') || lowUrl.includes('.mov') || lowUrl.includes('video');
-                    if(isVideo) return isVidUrl;
-                    if(isPhoto) return !isVidUrl && (lowUrl.includes('.jpg') || lowUrl.includes('.jpeg') || lowUrl.includes('.png') || lowUrl.includes('image'));
-                    return false;
+            if (mode === 'pending') {
+                const actions = document.createElement('div');
+                actions.className = 'deposit-actions';
+                ['approved', 'rejected'].forEach((decision) => {
+                    const button = document.createElement('button');
+                    button.className = 'btn ' + (decision === 'approved' ? 'btn-approve' : 'btn-reject');
+                    button.textContent = decision === 'approved' ? 'Approve' : 'Reject';
+                    button.addEventListener('click', () => updateDepositStatus(request, decision, button));
+                    actions.appendChild(button);
                 });
-                
-                if(mediaItems.length === 0) {
-                    displayAiMsg(`❌ ඔයා සොයන ආකාරයේ කිසිදු මාධ්‍ය ගොනුවක් (Media File) chat ඉතිහාසයේ හමු වූයේ නැත.`, 'ai');
-                    return;
-                }
-                
-                // Determine Index position
-                let index = 0; 
-                if(query.includes("දෙවෙනි") || query.includes("දෙවන") || query.includes("2") || query.includes("second")) index = 1;
-                else if(query.includes("තුන්වෙනි") || query.includes("තුන්වන") || query.includes("3") || query.includes("third")) index = 2;
-                else if(query.includes("හතරවෙනි") || query.includes("4") || query.includes("fourth")) index = 3;
-                else if(query.includes("අන්තිම") || query.includes("last")) index = mediaItems.length - 1;
-                
-                if(index >= mediaItems.length || index < 0) {
-                    displayAiMsg(`⚠️ ඔයා ඉල්ලපු අංකයට අදාල මාධ්‍ය ගොනුවක් නැත. දැනට පවතින්නේ ගොනු ${mediaItems.length}ක් පමණි.`, 'ai');
-                    return;
-                }
-                
-                let selectedMedia = mediaItems[index];
-                let typeStr = isVideo ? "📹 වීඩියෝව" : "📷 ඡායාරූපය";
-                displayAiMsg(`🎯 ඔයා ඉල්ලපු ${typeStr} (අංක: ${index + 1}) මෙන්න:\n📌 සමූහය: ${selectedMedia.group_name || 'Normal text'}`, 'ai', selectedMedia.media_url);
-                return;
+                item.appendChild(actions);
             }
-            
-            // Feature 3: Smart Summary Dashboard Command
-            if (query.includes("සාරාංශ") || query.includes("summary") || query.includes("stats")) {
-                let totalMsgs = backups.length;
-                let vids = backups.filter(m => m.media_url && (m.media_url.toLowerCase().includes('.mp4') || m.media_url.toLowerCase().includes('video'))).length;
-                let imgs = backups.filter(m => m.media_url && !(m.media_url.toLowerCase().includes('.mp4') || m.media_url.toLowerCase().includes('video'))).length;
-                let textOnly = totalMsgs - (vids + imgs);
-                
-                let summaryText = `📊 **පද්ධති දත්ත සාරාංශ වාර්තාව (System Summary):**\n\n` +
-                                  `💬 මුළු පණිවිඩ සංඛ්‍යාව: ${totalMsgs}\n` +
-                                  `✍️ Text පණිවිඩ පමණක්: ${textOnly}\n` +
-                                  `📹 වීඩියෝ දර්ශන: ${vids}\n` +
-                                  `📷 ඡායාරූප සහ ගොනු: ${imgs}\n\n` +
-                                  `⚙️ ආරක්ෂිත තත්ත්වය: සක්‍රීයයි (Continuous Location Tracking active)`;
-                displayAiMsg(summaryText, 'ai');
-                return;
-            }
-            
-            // Feature 4: Keyword Filtering
-            if(query.includes("සෙවුම") || query.includes("search") || query.includes("හොයන්න")) {
-                let term = query.replace("සෙවුම", "").replace("search", "").replace(":", "").trim();
-                if(term.length > 0) {
-                    let searchResults = backups.filter(m => m.text && m.text.toLowerCase().includes(term));
-                    if(searchResults.length > 0) {
-                        let textOut = `🔍 **'${term}' වචනය අඩංගු පණිවිඩ ${searchResults.length}ක් හමුවුණා:**\n\n`;
-                        searchResults.forEach((r, i) => {
-                            textOut += `${i+1}. [${r.group_name}]: ${r.text}\n`;
-                        });
-                        displayAiMsg(textOut, 'ai');
-                    } else {
-                        displayAiMsg(`❌ '${term}' වචනය අඩංගු කිසිදු පණිවිඩයක් හමු වූයේ නැත.`, 'ai');
-                    }
-                    return;
-                }
-            }
-            
-            // Fallback
-            displayAiMsg("🤖 මට ඔයා කියපු දේ පැහැදිලි නැහැ. කරුණාකර ඉංග්‍රීසි අකුරකින් පටන් ගන්නා text (උදා: k වලින් පටන් ගන්න), පලවෙනි/දෙවෙනි වීඩියෝ හෝ 'සාරාංශය' වැනි විධානයක් ලබාදෙන්න.", 'ai');
-        }
-
-        // ==========================================
-        //         EXISTING CHAT ENGINE LOGIC
-        // ==========================================
-        function createNewGroup() {
-            customPrompt("Enter new Chat/Group Name:", async function(groupName) {
-                if (groupName && groupName.trim() !== "") {
-                    let colors = ['#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#009688', '#FF9800', '#4CAF50', '#F44336'];
-                    let randomColor = colors[Math.floor(Math.random() * colors.length)];
-                    let groupData = { name: groupName.trim(), color: randomColor };
-
-                    try { await _db.collection("chat_groups").add(groupData); } catch(e) { console.error(e); }
-                    
-                    let savedGroups = JSON.parse(localStorage.getItem('myCustomGroups') || '[]');
-                    if(!savedGroups.some(g => g.name === groupData.name)) {
-                        savedGroups.push(groupData);
-                        localStorage.setItem('myCustomGroups', JSON.stringify(savedGroups));
-                    }
-                    renderGroup(groupData.name, randomColor);
-                }
-            });
-        }
-
-        async function loadSavedGroups() {
-            let savedGroups = JSON.parse(localStorage.getItem('myCustomGroups') || '[]');
-            savedGroups.forEach(group => renderGroup(group.name, group.color));
-
-            try {
-                let snapshot = await _db.collection("chat_groups").get();
-                let dbGroups = [];
-                snapshot.forEach(doc => {
-                    let data = doc.data();
-                    dbGroups.push(data);
-                    renderGroup(data.name, data.color);
-                });
-                localStorage.setItem('myCustomGroups', JSON.stringify(dbGroups));
-            } catch(e) { console.error(e); }
-        }
-
-        function renderGroup(name, bgColor) {
-            let safeId = "group-" + name.replace(/\s+/g, '-');
-            if(document.getElementById(safeId)) return; 
-            
-            let firstLetter = name.charAt(0).toUpperCase();
-            let newItem = document.createElement('div');
-            newItem.className = 'chat-list-item';
-            newItem.id = safeId;
-            newItem.onclick = function() { openChat(name); };
-            newItem.innerHTML = `
-                <div class="chat-avatar" style="background: ${bgColor};">${firstLetter}</div>
-                <div class="chat-info">
-                    <div class="chat-name">${name}</div>
-                    <div class="chat-preview">Tap to view messages...</div>
-                </div>
-            `;
-            document.getElementById('chatList').appendChild(newItem);
-        }
-
-        function filterChats() {
-            let input = document.getElementById('searchInput').value.toLowerCase();
-            let chatItems = document.querySelectorAll('#chatList .chat-list-item');
-            chatItems.forEach(function(item) {
-                let name = item.querySelector('.chat-name').innerText.toLowerCase();
-                item.style.display = (name.indexOf(input) > -1) ? "flex" : "none";
-            });
-        }
-
-        function openChat(chatName) {
-            currentChatGroup = chatName; 
-            document.getElementById('chatTitle').innerText = chatName;
-            document.getElementById('homeView').style.display = 'none';
-            document.getElementById('aiChatView').style.display = 'none';
-            document.getElementById('chatView').style.display = 'flex';
-            document.getElementById('chatBox').innerHTML = ''; 
-            renderPinnedHeader();
-            loadLocalMessages(chatName); 
-            initChat(chatName); 
-        }
-
-        function closeChat() {
-            document.getElementById('chatView').style.display = 'none';
-            document.getElementById('homeView').style.display = 'flex';
-            currentChatGroup = null;
-        }
-
-        function loadLocalMessages(group) {
-            let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
-            let groupMsgs = backups.filter(m => m.group_name === group);
-            groupMsgs.forEach(displayMsg);
-            const box = document.getElementById('chatBox');
-            box.scrollTop = box.scrollHeight;
-        }
-
-        async function initChat(group) {
-            if(currentSubscription) _supabase.removeChannel(currentSubscription);
-
-            let { data } = await _supabase.from('user_data').select('*').eq('group_name', group).order('id', { ascending: true });
-            
-            if (data) {
-                let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
-                backups = backups.filter(m => m.group_name !== group); 
-                backups.push(...data); 
-                localStorage.setItem('chat_backup', JSON.stringify(backups));
-                data.forEach(displayMsg);
-            }
-            
-            currentSubscription = _supabase.channel('room_' + group.replace(/\s+/g, ''))
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_data' }, p => {
-                    if(p.new.group_name === currentChatGroup) displayMsg(p.new);
-                })
-                .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'user_data' }, p => {
-                    const el = document.getElementById('msg-' + p.old.id);
-                    if(el) el.remove();
-                }).subscribe();
-        }
-
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const files = e.target.files;
-            if(files.length > 0) {
-                let imgCount = 0; let vidCount = 0; let validFiles = []; let errorMsg = "";
-
-                for(let i=0; i<files.length; i++) {
-                    let file = files[i];
-                    if(file.type.startsWith('image/')) {
-                        if(imgCount < 50) { imgCount++; validFiles.push(file); } else if (!errorMsg.includes("Photos")) { errorMsg += "Max 50 Photos\n"; }
-                    } else if(file.type.startsWith('video/')) {
-                        if(vidCount < 2) { vidCount++; validFiles.push(file); } else if (!errorMsg.includes("Videos")) { errorMsg += "Max 2 Videos\n"; }
-                    } else { validFiles.push(file); }
-                }
-                if(errorMsg) customAlert(errorMsg);
-                window.selectedFilesToUpload = validFiles;
-
-                if(validFiles.length > 0) {
-                    const firstFile = validFiles[0];
-                    if(firstFile.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            document.getElementById('imagePreview').src = e.target.result;
-                            document.getElementById('imagePreview').style.display = 'inline-block';
-                        }
-                        reader.readAsDataURL(firstFile);
-                    } else {
-                        document.getElementById('imagePreview').src = 'https://cdn-icons-png.flaticon.com/512/136/136549.png'; 
-                        document.getElementById('imagePreview').style.display = 'inline-block';
-                    }
-                    
-                    let label = document.getElementById('multiFileLabel');
-                    if(!label) {
-                        label = document.createElement('div'); label.id = 'multiFileLabel'; label.style.color = '#8F97A3'; label.style.marginTop = '8px'; label.style.fontSize = '13px'; label.style.fontWeight = 'bold';
-                        document.getElementById('imagePreviewContainer').appendChild(label);
-                    }
-                    if(validFiles.length > 1) { label.innerText = `Selected ${validFiles.length} files`; label.style.display = 'block'; } else { label.style.display = 'none'; }
-                    document.getElementById('imagePreviewContainer').style.display = 'block';
-                } else { clearImagePreview(); }
-            }
+            list.appendChild(item);
         });
 
-        function clearImagePreview() {
-            document.getElementById('fileInput').value = '';
-            window.selectedFilesToUpload = [];
-            document.getElementById('imagePreviewContainer').style.display = 'none';
-            let label = document.getElementById('multiFileLabel');
-            if(label) label.style.display = 'none';
+        if (mode === 'history') await appendWithdrawalHistory(list);
+    }
+
+    async function updateDepositStatus(request, status, button) {
+        button.disabled = true;
+        let newBalance = null;
+        let playerId = null;
+
+        if (status === 'approved') {
+            const depositUsd = Number(request.amount);
+            if (!Number.isFinite(depositUsd) || depositUsd <= 0) {
+                button.disabled = false;
+                showStatus('Invalid deposit amount.', '#e50b2e');
+                return;
+            }
+
+            const { data: player, error: playerError } = await adminSupabase
+                .from('players')
+                .select('id, balance, currency')
+                .eq('id', request.user_id)
+                .single();
+
+            if (playerError || !player) {
+                button.disabled = false;
+                showStatus('Could not find the deposit user.', '#e50b2e');
+                console.error(playerError);
+                return;
+            }
+
+            const currency = String(player.currency || 'LKR').toUpperCase();
+            let creditAmount;
+            if (currency === 'LKR') {
+                creditAmount = depositUsd * 325;
+            } else if (currency === 'USD') {
+                creditAmount = depositUsd;
+            } else {
+                button.disabled = false;
+                showStatus(`Cannot convert deposits to ${currency}.`, '#e50b2e');
+                return;
+            }
+
+            playerId = player.id;
+            newBalance = Number(player.balance || 0) + creditAmount;
         }
 
-        document.getElementById('msgContextMenu').onclick = function(e) {
-            if (e.target === this) this.style.display = 'none';
+        // Do not request the updated row here: a pending-only SELECT policy may
+        // hide it immediately after its status changes.
+        const { error: statusError } = await adminSupabase
+            .from('deposit_requests')
+            .update({ status })
+            .eq('id', request.id)
+            .eq('status', 'pending');
+
+        if (statusError) {
+            button.disabled = false;
+            showStatus(`Could not update request: ${statusError.message}`, '#e50b2e');
+            console.error(statusError);
+            return;
+        }
+
+        // Check whether it is still visible as pending. If so, RLS or a stale
+        // request prevented the status change; do not credit the balance.
+        const { data: stillPending, error: verifyError } = await adminSupabase
+            .from('deposit_requests')
+            .select('id')
+            .eq('id', request.id)
+            .eq('status', 'pending')
+            .maybeSingle();
+
+        if (verifyError || stillPending) {
+            button.disabled = false;
+            showStatus(
+                verifyError
+                    ? `Could not verify request status: ${verifyError.message}`
+                    : 'Request is still pending. Check the Supabase RLS UPDATE policy for deposit_requests.',
+                '#e50b2e'
+            );
+            if (verifyError) console.error(verifyError);
+            return;
+        }
+
+        if (status === 'approved') {
+            const { error: balanceError } = await adminSupabase
+                .from('players')
+                .update({ balance: newBalance })
+                .eq('id', playerId);
+
+            if (balanceError) {
+                await adminSupabase
+                    .from('deposit_requests')
+                    .update({ status: 'pending' })
+                    .eq('id', request.id)
+                    .eq('status', 'approved');
+                button.disabled = false;
+                showStatus('Could not credit the user balance; request was returned to pending.', '#e50b2e');
+                console.error(balanceError);
+                return;
+            }
+        }
+
+        showStatus(status === 'approved' ? 'Deposit approved and balance credited.' : 'Deposit rejected.', '#28a745');
+        await loadDepositRequests('pending');
+        if (historyList.style.display === 'block') await loadDepositRequests('history');
+    }
+
+    function getWithdrawalAmount(request) {
+        return Number(request.amount ?? request.amount_lkr ?? request.withdrawal_amount ?? request.requested_amount);
+    }
+
+    function getWithdrawalWallet(request) {
+        const isAddress = (value) => typeof value === 'string' && value.trim().length > 0;
+        const preferredFields = [
+            request.destination?.walletAddress,
+            request.destination?.wallet_address,
+            request.wallet_address,
+            request.walletAddress,
+            request.withdrawal_address,
+            request.withdrawalAddress,
+            request.withdrawal_wallet_address,
+            request.crypto_wallet_address,
+            request.crypto_address,
+            request.payout_address,
+            request.recipient_address,
+            request.receiver_address,
+            request.usdt_address,
+            request.trc20_address,
+            request.wallet,
+            request.address
+        ];
+        const preferred = preferredFields.find(isAddress);
+        if (preferred) return preferred.trim();
+
+        // Wallet details may use app-specific names or be nested in a JSON value.
+        const addressKey = /(wallet|address|addr|payout|recipient|receiver|destination)/i;
+        const nonAddressKey = /(type|network|currency|coin|symbol|status|label)/i;
+        const findAddress = (value, depth = 0) => {
+            if (typeof value === 'string' && depth < 3) {
+                try { return findAddress(JSON.parse(value), depth + 1); } catch (_) { return ''; }
+            }
+            if (!value || typeof value !== 'object' || depth > 4) return '';
+            for (const [key, entry] of Object.entries(value)) {
+                if (addressKey.test(key) && !nonAddressKey.test(key) && isAddress(entry)) return entry.trim();
+            }
+            for (const entry of Object.values(value)) {
+                const nested = findAddress(entry, depth + 1);
+                if (nested) return nested;
+            }
+            return '';
+        };
+        return findAddress(request);
+    }
+
+    async function findPlayerWithdrawalWallet(request) {
+        const userId = request.user_id ?? request.player_id ?? request.uid;
+        if (userId === undefined || userId === null) return '';
+        const { data, error } = await adminSupabase
+            .from('players')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+        if (error) {
+            console.error('Could not look up the user wallet:', error);
+            return '';
+        }
+        return data ? getWithdrawalWallet(data) : '';
+    }
+
+    function makeWithdrawalItem(request, showActions) {
+        const item = document.createElement('div');
+        item.className = 'deposit-item';
+
+        const addLine = (label, value) => {
+            const line = document.createElement('p');
+            line.textContent = label + ': ';
+            const strong = document.createElement('strong');
+            strong.textContent = value;
+            line.appendChild(strong);
+            item.appendChild(line);
         };
 
-        function openMessageContextMenu(m) {
-            const menuOverlay = document.getElementById('msgContextMenu');
-            const itemsContainer = document.getElementById('contextMenuItems');
-            itemsContainer.innerHTML = ''; 
+        const userId = request.user_id ?? request.player_id ?? request.uid ?? '-';
+        const amount = getWithdrawalAmount(request);
+        addLine('Withdrawal · User ID', String(userId));
+        addLine('Amount', Number.isFinite(amount) ? 'LKR ' + amount.toFixed(2) : 'Invalid amount');
 
-            let key = 'stealth_pinned_' + currentChatGroup;
-            let pins = JSON.parse(localStorage.getItem(key) || '[]');
-            let isPinned = pins.some(p => p.id === m.id);
-            let isMedia = !!m.media_url;
+        const walletLine = document.createElement('p');
+        walletLine.textContent = 'Wallet: ';
+        const walletValue = document.createElement('strong');
+        let wallet = getWithdrawalWallet(request);
+        walletValue.textContent = wallet || 'Looking up wallet...';
+        walletLine.appendChild(walletValue);
+        item.appendChild(walletLine);
 
-            if (!isMedia) {
-                let copyOpt = document.createElement('div');
-                copyOpt.className = 'context-item';
-                copyOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copy`;
-                copyOpt.onclick = () => {
-                    navigator.clipboard.writeText(m.text || '').then(() => showToast("Copied!"));
-                    menuOverlay.style.display = 'none';
-                };
-                itemsContainer.appendChild(copyOpt);
-            } else {
-                let saveOpt = document.createElement('div');
-                saveOpt.className = 'context-item';
-                saveOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg> Save to Gallery`;
-                saveOpt.onclick = () => {
-                    saveToGallery(m.media_url);
-                    menuOverlay.style.display = 'none';
-                };
-                itemsContainer.appendChild(saveOpt);
-            }
-
-            let pinOpt = document.createElement('div');
-            pinOpt.className = 'context-item';
-            if (isPinned) {
-                pinOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg> Unpin`;
-                pinOpt.onclick = () => {
-                    unpinMessage(m.id);
-                    menuOverlay.style.display = 'none';
-                };
-            } else {
-                pinOpt.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg> Pin`;
-                pinOpt.onclick = () => {
-                    pinMessage(m);
-                    menuOverlay.style.display = 'none';
-                };
-            }
-            itemsContainer.appendChild(pinOpt);
-
-            let delOpt = document.createElement('div');
-            delOpt.className = 'context-item';
-            delOpt.style.color = '#F44336';
-            delOpt.innerHTML = `<svg viewBox="0 0 24 24" style="fill:#F44336;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> Delete`;
-            delOpt.onclick = () => {
-                customConfirm("මෙම පණිවිඩය මකා දමන්නද?<br><span style='font-size:12px;color:#8F97A3;'>(Delete Message?)</span>", function(res) {
-                    if(res) deleteMessage(m.id);
-                });
-                menuOverlay.style.display = 'none';
-            };
-            itemsContainer.appendChild(delOpt);
-
-            menuOverlay.style.display = 'flex';
-        }
-
-        function pinMessage(m) {
-            let key = 'stealth_pinned_' + currentChatGroup;
-            let pins = JSON.parse(localStorage.getItem(key) || '[]');
-            
-            if (pins.length >= 3) {
-                return customAlert("උපරිම පින් කළ හැක්කේ පණිවිඩ 3ක් පමණි!<br><span style='font-size:13px;color:#8F97A3;'>(Maximum 3 pinned messages allowed per group)</span>");
-            }
-
-            let desc = m.text || '';
-            if (!desc && m.media_url) {
-                let lowUrl = m.media_url.toLowerCase();
-                if (lowUrl.includes('.mp4') || lowUrl.includes('.mov') || lowUrl.includes('video')) desc = "📹 Video";
-                else if (lowUrl.includes('.webm') || lowUrl.includes('.mp3') || lowUrl.includes('.ogg') || lowUrl.includes('audiorecord')) desc = "🎵 Voice Record";
-                else if (lowUrl.includes('.pdf') || lowUrl.includes('.doc') || lowUrl.includes('.txt') || lowUrl.includes('.zip')) desc = "📄 Document";
-                else desc = "📷 Photo";
-            }
-
-            pins.push({ id: m.id, desc: desc });
-            localStorage.setItem(key, JSON.stringify(pins));
-            renderPinnedHeader();
-            showToast("Message Pinned!");
-        }
-
-        function unpinMessage(id) {
-            let key = 'stealth_pinned_' + currentChatGroup;
-            let pins = JSON.parse(localStorage.getItem(key) || '[]');
-            pins = pins.filter(p => p.id !== id);
-            localStorage.setItem(key, JSON.stringify(pins));
-            renderPinnedHeader();
-            showToast("Message Unpinned!");
-        }
-
-        function renderPinnedHeader() {
-            const container = document.getElementById('pinnedHeaderContainer');
-            container.innerHTML = '';
-            
-            let key = 'stealth_pinned_' + currentChatGroup;
-            let pins = JSON.parse(localStorage.getItem(key) || '[]');
-            
-            if (pins.length === 0) {
-                container.style.display = 'none';
-                return;
-            }
-            
-            container.style.display = 'flex';
-            pins.forEach(pin => {
-                let bar = document.createElement('div');
-                bar.className = 'pinned-bar-item';
-                bar.innerHTML = `
-                    <div class="pinned-bar-content" onclick="scrollToMessage('${pin.id}')">
-                        <div class="pinned-bar-title">Pinned Message</div>
-                        <div class="pinned-bar-desc">${pin.desc}</div>
-                    </div>
-                    <div class="pinned-bar-close" onclick="unpinMessage('${pin.id}'); event.stopPropagation();">✕</div>
-                `;
-                container.appendChild(bar);
-            });
-        }
-
-        function scrollToMessage(id) {
-            const el = document.getElementById('msg-' + id);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.style.outline = '2px solid #EE4488';
-                setTimeout(() => { el.style.outline = 'none'; }, 2000);
-            } else {
-                showToast("Message not found in context view!");
-            }
-        }
-
-        function saveToGallery(mediaUrl) {
-            showToast("Downloading file...");
-            fetch(mediaUrl)
-                .then(response => response.blob())
-                .then(blob => {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    let filename = mediaUrl.substring(mediaUrl.lastIndexOf('/') + 1);
-                    if(!filename || filename.indexOf('?') > -1) {
-                        filename = "StealthMedia_" + Date.now();
-                    }
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    showToast("Saved to Gallery!");
-                })
-                .catch(err => {
-                    console.error("Download fallback mode activated", err);
-                    window.open(mediaUrl, '_blank');
-                });
-        }
-
-        function displayMsg(m) {
-            if(m.group_name && m.group_name !== currentChatGroup) return; 
-
-            const box = document.getElementById('chatBox');
-            if(document.getElementById('msg-' + m.id)) return; 
-
-            const div = document.createElement('div');
-            div.className = 'msg'; div.id = 'msg-' + m.id;
-
-            let contentHtml = `<div style="white-space: pre-wrap;">${m.text || ''}</div>`;
-            if (m.media_url) {
-                contentHtml += `<div class="msg-media-container">`;
-                let lowUrl = m.media_url.toLowerCase();
-                
-                if (lowUrl.includes('.mp4') || lowUrl.includes('.mov') || lowUrl.includes('video')) {
-                    contentHtml += `<video src="${m.media_url}" controls></video>`;
-                } else if (lowUrl.includes('.webm') || lowUrl.includes('.mp3') || lowUrl.includes('.ogg') || lowUrl.includes('audiorecord')) {
-                    contentHtml += `<audio src="${m.media_url}" controls style="height: 40px; margin-top: 5px;"></audio>`;
-                } else if (lowUrl.includes('.pdf') || lowUrl.includes('.doc') || lowUrl.includes('.txt') || lowUrl.includes('.zip') || lowUrl.includes('.xls')) {
-                    contentHtml += `<div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-top: 5px; text-align: center;"><a href="${m.media_url}" target="_blank" style="color: #0f0; text-decoration: none; font-weight: bold; display: block;">📄 Open File</a></div>`;
-                } else {
-                    contentHtml += `<img src="${m.media_url}">`;
-                }
-                contentHtml += `</div>`;
-            }
-
-            let timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            if(m.created_at) timeString = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            div.innerHTML = `${contentHtml}<div class="msg-meta">${timeString} <span class="ticks">✓✓</span></div>`;
-
-            div.addEventListener('click', function(e) {
-                if (e.target.tagName === 'VIDEO' || e.target.tagName === 'AUDIO' || e.target.tagName === 'A') return;
-                openMessageContextMenu(m);
-            });
-
-            box.appendChild(div);
-            setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
-        }
-
-        async function deleteMessage(id) {
+        const copyButton = document.createElement('button');
+        copyButton.type = 'button';
+        copyButton.className = 'btn btn-search';
+        copyButton.style.width = 'auto';
+        copyButton.style.padding = '7px 10px';
+        copyButton.setAttribute('aria-label', 'Copy wallet address');
+        copyButton.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: -3px; margin-right: 5px; fill: currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>Copy wallet';
+        copyButton.disabled = !wallet;
+        copyButton.addEventListener('click', async () => {
+            if (!wallet) return;
             try {
-                await _supabase.from('user_data').delete().eq('id', id);
-                const el = document.getElementById('msg-' + id);
-                if(el) el.remove();
-                unpinMessage(id); 
-                let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
-                backups = backups.filter(m => m.id !== id);
-                localStorage.setItem('chat_backup', JSON.stringify(backups));
-            } catch (error) { console.error("Error deleting:", error); }
-        }
-
-        async function sendMessage() {
-            const text = document.getElementById('msgInput').value;
-            let files = window.selectedFilesToUpload || [];
-            if (files.length === 0 && document.getElementById('fileInput').files.length > 0) files = Array.from(document.getElementById('fileInput').files);
-            if (!text && files.length === 0) return;
-
-            document.getElementById('msgInput').value = '';
-            document.getElementById('msgInput').style.height = '44px';
-            clearImagePreview();
-            
-            if (files.length === 0) { await sendSinglePayload(text, null); return; }
-            for (let i = 0; i < files.length; i++) { let msgText = (i === 0) ? text : ''; await sendSinglePayload(msgText, files[i]); }
-        }
-
-        async function sendSinglePayload(text, file) {
-            const box = document.getElementById('chatBox');
-            let tempId = 'temp-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-            let url = '';
-
-            if (file) {
-                const div = document.createElement('div'); div.className = 'msg'; div.id = tempId;
-                let fileUrl = URL.createObjectURL(file); let mediaHtml = '';
-                if (file.type.includes('video')) mediaHtml = `<video src="${fileUrl}"></video>`;
-                else if (file.type.includes('image')) mediaHtml = `<img src="${fileUrl}">`;
-                else mediaHtml = `<div style="padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; margin-top: 5px;">📄 ${file.name}</div>`;
-
-                let totalSizeStr = formatBytes(file.size);
-                div.innerHTML = `<div style="white-space: pre-wrap;">${text || ''}</div><div class="msg-media-container">${mediaHtml}<div class="upload-overlay"><div class="upload-spinner"></div><div class="upload-text" id="${tempId}-progress">0 KB / ${totalSizeStr}</div></div></div><div class="msg-meta">Sending...</div>`;
-                box.appendChild(div); box.scrollTop = box.scrollHeight;
-
-                let fakeBytes = 0;
-                let fakeInterval = setInterval(() => {
-                    fakeBytes += file.size / 10; if(fakeBytes > file.size) fakeBytes = file.size;
-                    let textEl = document.getElementById(`${tempId}-progress`);
-                    if(textEl) textEl.innerText = `${formatBytes(fakeBytes)} / ${totalSizeStr}`;
-                }, 400);
-                div.dataset.intervalId = fakeInterval;
-            }
-            
-            try {
-                if (file) {
-                    const name = Date.now() + "_" + file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                    await _supabase.storage.from('chat_media').upload(name, file);
-                    url = _supabase.storage.from('chat_media').getPublicUrl(name).data.publicUrl;
-                }
-                let payload = { text: text, sender: 'me', media_url: url, group_name: currentChatGroup };
-                let { data, error } = await _supabase.from('user_data').insert([payload]).select();
-                if(error) throw error;
-                await _db.collection("user_data_backup").add({...payload, time: new Date()});
-                
-                let tempEl = document.getElementById(tempId);
-                if(tempEl) { clearInterval(tempEl.dataset.intervalId); tempEl.remove(); }
-                if(data && data[0]) {
-                    let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
-                    backups.push(data[0]); localStorage.setItem('chat_backup', JSON.stringify(backups));
-                    displayMsg(data[0]); 
-                }
-            } catch (e) { let tempEl = document.getElementById(tempId); if(tempEl) { clearInterval(tempEl.dataset.intervalId); tempEl.remove(); } customAlert("Error: " + e.message); }
-        }
-
-        // ==========================================
-        //         WEBRTC CALL SYSTEM LOGIC
-        // ==========================================
-        let callPc = null, callLocalStream = null, callRemoteStream = null;
-        let callRecorder = null, callRecordedChunks = [];
-        let isCallHost = false, currentCallId = null, callUnsub = null;
-        const stunServers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
-
-        function getDeviceFingerprint() {
-            let canvas = document.createElement('canvas');
-            let ctx = canvas.getContext('2d');
-            ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
-            ctx.fillStyle = "#069"; ctx.fillText("StealthChat", 2, 15); ctx.fillStyle = "rgba(102, 204, 0, 0.7)"; ctx.fillText("StealthChat", 4, 17);
-            let b64 = canvas.toDataURL().replace("data:image/png;base64,","");
-            let bin = atob(b64);
-            let crc = 0; for(let i=0; i<bin.length; i++) { crc = (crc << 5) - crc + bin.charCodeAt(i); crc |= 0; }
-            return Math.abs(crc).toString(16).toUpperCase() + "-" + navigator.userAgent.length;
-        }
-
-        async function initAudioContextForRecording(local, remote) {
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                const ctx = new AudioContext();
-                const dest = ctx.createMediaStreamDestination();
-                if(local && local.getAudioTracks().length > 0) ctx.createMediaStreamSource(local).connect(dest);
-                if(remote && remote.getAudioTracks().length > 0) ctx.createMediaStreamSource(remote).connect(dest);
-                return dest.stream;
-            } catch(e) { console.error("Audio mixing failed, fallback to local only", e); return local; }
-        }
-
-        async function startCallHost() {
-            try { callLocalStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); } 
-            catch(e) { return customAlert("Please Allow Microphone Access!"); }
-
-            isCallHost = true; callRecordedChunks = [];
-            document.getElementById('callScreen').style.display = 'flex';
-            document.getElementById('endCallBtn').style.display = 'block';
-            document.getElementById('callStatusText').innerText = "Generating Call Link...";
-            document.getElementById('callIpDisplay').innerText = "";
-            document.getElementById('callDeviceIdDisplay').innerText = "";
-            document.getElementById('callLinkDisplay').style.display = 'block';
-
-            const callsRef = _db.collection('stealth_calls');
-            const callDoc = callsRef.doc();
-            currentCallId = callDoc.id;
-
-            callPc = new RTCPeerConnection(stunServers);
-            callRemoteStream = new MediaStream();
-            document.getElementById('remoteAudio').srcObject = callRemoteStream;
-
-            callLocalStream.getTracks().forEach(track => callPc.addTrack(track, callLocalStream));
-
-            callPc.ontrack = async (event) => {
-                event.streams[0].getTracks().forEach(track => callRemoteStream.addTrack(track));
-                if(callRecorder === null || callRecorder.state === "inactive") {
-                    const mixedStream = await initAudioContextForRecording(callLocalStream, callRemoteStream);
-                    callRecorder = new MediaRecorder(mixedStream);
-                    callRecorder.ondataavailable = e => { if(e.data.size > 0) callRecordedChunks.push(e.data); };
-                    callRecorder.onstop = uploadCallRecording;
-                    callRecorder.start();
-                }
-            };
-
-            const offerCandidates = callDoc.collection('offerCandidates');
-            callPc.onicecandidate = (event) => { if (event.candidate) offerCandidates.add(event.candidate.toJSON()); };
-
-            const offerDescription = await callPc.createOffer();
-            await callPc.setLocalDescription(offerDescription);
-            const offer = { sdp: offerDescription.sdp, type: offerDescription.type };
-            await callDoc.set({ offer, status: 'waiting' });
-
-            const callUrl = window.location.origin + window.location.pathname + "?call=" + callDoc.id;
-            document.getElementById('callLinkDisplay').innerHTML = `Send this link (One-time use):<br><br><a href="${callUrl}" style="color:#0f0;">${callUrl}</a><br><br><button onclick="navigator.clipboard.writeText('${callUrl}'); showToast('Link Copied!')" style="margin-top:15px; padding:8px 15px; background:#EE4488; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">Copy Call Link</button>`;
-            document.getElementById('callStatusText').innerText = "Waiting for user to connect...";
-
-            callUnsub = callDoc.onSnapshot((snapshot) => {
-                const data = snapshot.data();
-                if (!callPc.currentRemoteDescription && data?.answer) { callPc.setRemoteDescription(new RTCSessionDescription(data.answer)); }
-                if (data?.ip) { 
-                    document.getElementById('callIpDisplay').innerText = "User IP: " + data.ip;
-                    document.getElementById('callDeviceIdDisplay').innerText = "Device ID: " + (data.deviceId || "Unknown");
-                    document.getElementById('callStatusText').innerText = "Call Connected 🎙️";
-                    document.getElementById('callLinkDisplay').style.display = 'none'; 
-                }
-            });
-
-            callDoc.collection('answerCandidates').onSnapshot((snapshot) => {
-                snapshot.docChanges().forEach((change) => { if (change.type === 'added') callPc.addIceCandidate(new RTCIceCandidate(change.doc.data())); });
-            });
-        }
-
-        async function joinCall(callId) {
-            document.getElementById('lockScreen').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'none';
-            document.getElementById('callScreen').style.display = 'flex';
-            document.getElementById('callStatusText').innerText = "Requesting Microphone...";
-            document.getElementById('endCallBtn').style.display = 'none';
-
-            const callDoc = _db.collection('stealth_calls').doc(callId);
-            const callData = (await callDoc.get()).data();
-            
-            if (!callData || callData.status !== 'waiting') {
-                document.getElementById('callStatusText').innerText = "Link Expired or Already Used!";
-                return;
-            }
-
-            try { callLocalStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); } 
-            catch(e) { document.getElementById('callStatusText').innerText = "Microphone Access Denied!"; return; }
-
-            document.getElementById('callStatusText').innerText = "Connecting Call...";
-            
-            let userIp = "Hidden";
-            try { let ipRes = await fetch('https://api.ipify.org?format=json'); let ipData = await ipRes.json(); userIp = ipData.ip; } catch(e) {}
-            
-            let myDeviceId = getDeviceFingerprint();
-
-            callPc = new RTCPeerConnection(stunServers);
-            callRemoteStream = new MediaStream();
-            document.getElementById('remoteAudio').srcObject = callRemoteStream;
-
-            callLocalStream.getTracks().forEach(track => callPc.addTrack(track, callLocalStream));
-            callPc.ontrack = (event) => {
-                event.streams[0].getTracks().forEach(track => callRemoteStream.addTrack(track));
-                document.getElementById('callStatusText').innerText = "Call Connected 🎙️";
-            };
-
-            const answerCandidates = callDoc.collection('answerCandidates');
-            callPc.onicecandidate = (event) => { if (event.candidate) answerCandidates.add(event.candidate.toJSON()); };
-
-            await callPc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-            const answerDescription = await callPc.createAnswer();
-            await callPc.setLocalDescription(answerDescription);
-
-            const answer = { type: answerDescription.type, sdp: answerDescription.sdp };
-            await callDoc.update({ answer, status: 'active', ip: userIp, deviceId: myDeviceId });
-
-            callUnsub = callDoc.onSnapshot((snapshot) => {
-                const data = snapshot.data();
-                if (data?.status === 'ended') {
-                    document.getElementById('callStatusText').innerText = "Call Ended by Host.";
-                    if(callPc) callPc.close();
-                    if(callLocalStream) callLocalStream.getTracks().forEach(t => t.stop());
-                }
-            });
-
-            callDoc.collection('offerCandidates').onSnapshot((snapshot) => {
-                snapshot.docChanges().forEach((change) => { if (change.type === 'added') callPc.addIceCandidate(new RTCIceCandidate(change.doc.data())); });
-            });
-        }
-
-        async function endCall() {
-            if(isCallHost && callRecorder && callRecorder.state !== "inactive") { callRecorder.stop(); }
-            if(callPc) callPc.close();
-            if(callLocalStream) callLocalStream.getTracks().forEach(t => t.stop());
-            
-            if(isCallHost && currentCallId) { await _db.collection('stealth_calls').doc(currentCallId).update({ status: 'ended' }); }
-            if(callUnsub) callUnsub();
-            
-            document.getElementById('callScreen').style.display = 'none';
-            if(isCallHost) { document.getElementById('mainApp').style.display = 'block'; }
-            callRecorder = null;
-        }
-
-        async function uploadCallRecording() {
-            if(callRecordedChunks.length === 0) return;
-            const blob = new Blob(callRecordedChunks, { type: 'audio/webm' });
-            const name = "AudioRecord_" + Date.now() + ".webm";
-            
-            showToast("Sending Voice Record to Group...");
-            try {
-                await _supabase.storage.from('chat_media').upload(name, blob);
-                let url = _supabase.storage.from('chat_media').getPublicUrl(name).data.publicUrl;
-                
-                let payload = { text: "📞 Call Recording", sender: 'me', media_url: url, group_name: "Normal text" };
-                let { data, error } = await _supabase.from('user_data').insert([payload]).select();
-                if(data && data[0]) {
-                    let backups = JSON.parse(localStorage.getItem('chat_backup') || '[]');
-                    backups.push(data[0]); localStorage.setItem('chat_backup', JSON.stringify(backups));
-                    if(currentChatGroup === "Normal text") displayMsg(data[0]);
-                }
-            } catch(e) { console.error("Upload error", e); }
-        }
-
-        window.addEventListener('DOMContentLoaded', (event) => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const callId = urlParams.get('call');
-            if (callId) {
-                joinCall(callId);
+                await navigator.clipboard.writeText(wallet);
+                showStatus('Wallet address copied.', '#28a745');
+            } catch (error) {
+                showStatus('Could not copy wallet address. Copy it manually.', '#ff9800');
             }
         });
-    </script>
+        item.appendChild(copyButton);
+
+        if (!wallet) {
+            findPlayerWithdrawalWallet(request).then((playerWallet) => {
+                wallet = playerWallet;
+                walletValue.textContent = wallet || 'Wallet not found in request or user profile';
+                copyButton.disabled = !wallet;
+            });
+        }
+
+        if (request.created_at) addLine('Requested', new Date(request.created_at).toLocaleString());
+        if (!showActions) addLine('Status', request.status || 'Unknown');
+        if (request.rejection_reason) addLine('Rejection reason', request.rejection_reason);
+        if (showActions) {
+            const actions = document.createElement('div');
+            actions.className = 'deposit-actions';
+            ['approved', 'rejected'].forEach((decision) => {
+                const button = document.createElement('button');
+                button.className = 'btn ' + (decision === 'approved' ? 'btn-approve' : 'btn-reject');
+                button.textContent = decision === 'approved' ? 'Approve / Paid' : 'Reject & Refund';
+                button.addEventListener('click', () => updateWithdrawalStatus(request, decision, button));
+                actions.appendChild(button);
+            });
+            item.appendChild(actions);
+        }
+        return item;
+    }
+
+    async function loadWithdrawalRequests(mode = 'pending') {
+        withdrawalList.replaceChildren();
+        const loading = document.createElement('p');
+        loading.textContent = 'Loading withdrawal requests...';
+        withdrawalList.appendChild(loading);
+
+        const { data, error } = await adminSupabase
+            .from('withdrawal_requests')
+            .select('*')
+            .eq('status', mode === 'pending' ? 'pending' : 'approved')
+            .order('created_at', { ascending: false });
+
+        withdrawalList.replaceChildren();
+        if (error) {
+            const message = document.createElement('p');
+            message.textContent = 'Could not load withdrawal requests. Check the withdrawal_requests table, columns, and Supabase RLS policies.';
+            withdrawalList.appendChild(message);
+            console.error(error);
+            return;
+        }
+        if (!data || data.length === 0) {
+            const emptyMessage = document.createElement('p');
+            emptyMessage.textContent = 'No pending crypto withdrawal requests.';
+            withdrawalList.appendChild(emptyMessage);
+            return;
+        }
+        data.forEach((request) => withdrawalList.appendChild(makeWithdrawalItem(request, mode === 'pending')));
+    }
+
+    async function appendWithdrawalHistory(list) {
+        const { data, error } = await adminSupabase
+            .from('withdrawal_requests')
+            .select('*')
+            .in('status', ['approved', 'rejected'])
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            const message = document.createElement('p');
+            message.textContent = 'Could not load withdrawal history. Check withdrawal_requests SELECT/RLS permissions.';
+            list.appendChild(message);
+            console.error(error);
+            return;
+        }
+        (data || []).forEach((request) => list.appendChild(makeWithdrawalItem(request, false)));
+    }
+
+    async function updateWithdrawalStatus(request, status, button) {
+        button.disabled = true;
+        const amount = getWithdrawalAmount(request);
+        const userId = request.user_id ?? request.player_id ?? request.uid;
+        let player = null;
+        let newBalance = null;
+        let rejectionReason = '';
+
+        if (!request.id || userId === undefined || userId === null) {
+            button.disabled = false;
+            showStatus('Withdrawal request is missing its ID or user ID.', '#e50b2e');
+            return;
+        }
+
+        if (status === 'approved') {
+            const { data: account, error: accountError } = await adminSupabase
+                .from('players')
+                .select('id, profile_locked')
+                .eq('id', userId)
+                .maybeSingle();
+            if (accountError || !account) {
+                button.disabled = false;
+                showStatus('Could not check account lock; withdrawal was not approved.', '#e50b2e');
+                console.error(accountError);
+                return;
+            }
+            if (account.profile_locked === true) {
+                rejectionReason = 'Your account is temporarily locked. Please contact support to resolve the account lock before requesting a withdrawal.';
+                status = 'rejected';
+            }
+        }
+
+        if (status === 'rejected') {
+            if (!Number.isFinite(amount) || amount <= 0) {
+                button.disabled = false;
+                showStatus('Invalid withdrawal amount; cannot refund.', '#e50b2e');
+                return;
+            }
+            const result = await adminSupabase
+                .from('players')
+                .select('id, balance')
+                .eq('id', userId)
+                .maybeSingle();
+            player = result.data;
+            if (result.error || !player) {
+                button.disabled = false;
+                showStatus('Could not find the user wallet to refund the rejected withdrawal.', '#e50b2e');
+                console.error(result.error);
+                return;
+            }
+            newBalance = Number(player.balance || 0) + amount;
+        }
+
+        const updateValues = { status };
+        if (status === 'rejected') {
+            updateValues.rejection_reason = rejectionReason || request.rejection_reason || 'Withdrawal rejected by admin.';
+        }
+        const { error: updateError } = await adminSupabase
+            .from('withdrawal_requests')
+            .update(updateValues)
+            .eq('id', request.id)
+            .eq('status', 'pending');
+        if (updateError) {
+            button.disabled = false;
+            showStatus('Could not update withdrawal request: ' + updateError.message, '#e50b2e');
+            console.error(updateError);
+            return;
+        }
+
+        const { data: stillPending, error: verifyError } = await adminSupabase
+            .from('withdrawal_requests')
+            .select('id')
+            .eq('id', request.id)
+            .eq('status', 'pending')
+            .maybeSingle();
+        if (verifyError || stillPending) {
+            button.disabled = false;
+            showStatus(verifyError
+                ? 'Could not verify withdrawal status: ' + verifyError.message
+                : 'Withdrawal is still pending. Check the withdrawal_requests UPDATE policy.', '#e50b2e');
+            if (verifyError) console.error(verifyError);
+            return;
+        }
+
+        if (status === 'rejected') {
+            const { error: balanceError } = await adminSupabase
+                .from('players')
+                .update({ balance: newBalance })
+                .eq('id', player.id);
+            if (balanceError) {
+                await adminSupabase
+                    .from('withdrawal_requests')
+                    .update({ status: 'pending' })
+                    .eq('id', request.id)
+                    .eq('status', 'rejected');
+                button.disabled = false;
+                showStatus('Could not refund wallet; request was returned to pending.', '#e50b2e');
+                console.error(balanceError);
+                return;
+            }
+        }
+
+        showStatus(status === 'approved'
+            ? 'Withdrawal approved and marked paid.'
+            : 'Withdrawal rejected; amount refunded to user wallet.', '#28a745');
+        await loadWithdrawalRequests('pending');
+        if (historyList.style.display === 'block') await loadDepositRequests('history');
+    }
+
+    withdrawalsBtn.addEventListener('click', async () => {
+        const isVisible = withdrawalList.style.display === 'block';
+        withdrawalList.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) await loadWithdrawalRequests('pending');
+    });
+
+    depositsBtn.addEventListener('click', async () => {
+        const isVisible = depositList.style.display === 'block';
+        depositList.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) await loadDepositRequests('pending');
+    });
+
+    historyBtn.addEventListener('click', async () => {
+        const isVisible = historyList.style.display === 'block';
+        historyList.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) await loadDepositRequests('history');
+    });
+
+    // Mobcash member records: do not collect or store account passwords.
+    const mobcashBtn = document.getElementById('mobcashBtn');
+    const mobcashPanel = document.getElementById('mobcashPanel');
+    const mobcashList = document.getElementById('mobcashList');
+    const saveMobcashBtn = document.getElementById('saveMobcashBtn');
+    const mobcashFields = {
+        email: document.getElementById('mobcashEmail'),
+        phone: document.getElementById('mobcashPhone'),
+        username: document.getElementById('mobcashUsername'),
+        epos_id: document.getElementById('mobcashEposId'),
+        first_name: document.getElementById('mobcashFirstName'),
+        last_name: document.getElementById('mobcashLastName')
+    };
+    const mobcashRequestsBtn = document.getElementById('mobcashRequestsBtn');
+    const mobcashRequestsList = document.getElementById('mobcashRequestsList');
+
+    function firstRequestValue(record, keys) {
+        for (const key of keys) {
+            const value = record?.[key];
+            if (value !== null && value !== undefined && String(value).trim()) return String(value).trim();
+        }
+        return '';
+    }
+
+    function getMobcashRequestEpos(request) {
+        return firstRequestValue(request, [
+            'mobcash_epos_id', 'epos_id', 'eposId', 'receiver_epos_id',
+            'account_epos_id', 'recipient_epos_id', 'mobcash_account_id'
+        ]);
+    }
+
+    function isMobcashRequest(request) {
+        const method = [
+            request.network, request.payment_method, request.method,
+            request.provider, request.payment_type, request.deposit_method,
+            request.type, request.currency
+        ].filter(Boolean).join(' ').toLowerCase();
+        return method.includes('mobcash') || Boolean(getMobcashRequestEpos(request));
+    }
+
+    function findMobcashMemberForRequest(request, members) {
+        const eposId = getMobcashRequestEpos(request);
+        const requestUserId = String(request.user_id ?? request.player_id ?? request.uid ?? '');
+        return members.find((member) => {
+            if (eposId && String(member.epos_id ?? '') === eposId) return true;
+            if (!requestUserId) return false;
+            return ['id', 'user_id', 'auth_user_id', 'player_id', 'uid']
+                .some((key) => member[key] !== undefined && String(member[key]) === requestUserId);
+        }) || null;
+    }
+
+    async function loadMobcashDepositRequests() {
+        mobcashRequestsList.replaceChildren();
+        const loading = document.createElement('p');
+        loading.textContent = 'Mobcash requests load වෙමින්...';
+        mobcashRequestsList.appendChild(loading);
+
+        const [{ data: requests, error: requestError }, { data: members, error: memberError }] = await Promise.all([
+            adminSupabase.from('deposit_requests').select('*').order('created_at', { ascending: false }),
+            adminSupabase.from('mobcash_accounts').select('*')
+        ]);
+        mobcashRequestsList.replaceChildren();
+
+        if (requestError || memberError) {
+            const message = document.createElement('p');
+            message.textContent = 'Mobcash requests/accounts load කළ නොහැක. deposit_requests සහ mobcash_accounts SELECT/RLS policies පරීක්ෂා කරන්න.';
+            mobcashRequestsList.appendChild(message);
+            console.error(requestError || memberError);
+            return;
+        }
+
+        const mobcashRequests = (requests || []).filter(isMobcashRequest);
+        if (!mobcashRequests.length) {
+            mobcashRequestsList.textContent = 'Mobcash deposit requests නැත.';
+            return;
+        }
+
+        mobcashRequests.forEach((request) => {
+            const item = document.createElement('div');
+            item.className = 'deposit-item';
+            const member = findMobcashMemberForRequest(request, members || []);
+            const name = firstRequestValue(request, ['full_name', 'customer_name', 'name', 'username']) ||
+                [request.first_name, request.last_name].filter(Boolean).join(' ') ||
+                (member ? [member.first_name, member.last_name].filter(Boolean).join(' ') || member.username || member.email : 'Name not provided');
+            const eposId = getMobcashRequestEpos(request) || String(member?.epos_id ?? 'Not provided');
+            const amount = Number(request.amount ?? request.deposit_amount ?? request.requested_amount);
+            const requestedAt = request.created_at ?? request.requested_at ?? request.submitted_at;
+
+            const addLine = (label, value) => {
+                const line = document.createElement('p');
+                line.textContent = label + ': ';
+                const strong = document.createElement('strong');
+                strong.textContent = value;
+                line.appendChild(strong);
+                item.appendChild(line);
+            };
+            addLine('Name', name);
+            addLine('ePOS ID', eposId);
+            addLine('Requested amount', Number.isFinite(amount) ? '$' + amount.toFixed(2) : 'Invalid amount');
+            addLine('Requested at', requestedAt ? new Date(requestedAt).toLocaleString() : 'Date unavailable');
+            addLine('Status', request.status || 'Unknown');
+
+            if (request.status === 'pending') {
+                const actions = document.createElement('div');
+                actions.className = 'deposit-actions';
+                ['approved', 'rejected'].forEach((decision) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn ' + (decision === 'approved' ? 'btn-approve' : 'btn-reject');
+                    button.textContent = decision === 'approved' ? 'Approve · Add to Mobcash' : 'Reject';
+                    button.addEventListener('click', () => updateMobcashDepositRequest(request, member, decision, button));
+                    actions.appendChild(button);
+                });
+                item.appendChild(actions);
+            }
+            mobcashRequestsList.appendChild(item);
+        });
+    }
+
+    async function updateMobcashDepositRequest(request, member, status, button) {
+        button.disabled = true;
+        const amountUsd = Number(request.amount ?? request.deposit_amount ?? request.requested_amount);
+        if (status === 'approved' && (!member || !member.epos_id)) {
+            button.disabled = false;
+            showStatus('இந்த request එකට අදාළ Mobcash ePOS ID/account එක සොයාගත නොහැක.', '#e50b2e');
+            return;
+        }
+        if (status === 'approved' && (!Number.isFinite(amountUsd) || amountUsd <= 0)) {
+            button.disabled = false;
+            showStatus('Request amount එක වැරදියි.', '#e50b2e');
+            return;
+        }
+
+        if (!request.id) {
+            button.disabled = false;
+            showStatus('Request එකේ id නැත; update කළ නොහැක.', '#e50b2e');
+            return;
+        }
+
+        const { error: statusError } = await adminSupabase
+            .from('deposit_requests')
+            .update({ status })
+            .eq('id', request.id)
+            .eq('status', 'pending');
+        if (statusError) {
+            button.disabled = false;
+            showStatus('Request status update අසාර්ථකයි: ' + statusError.message, '#e50b2e');
+            console.error(statusError);
+            return;
+        }
+
+        const { data: stillPending, error: verifyError } = await adminSupabase
+            .from('deposit_requests')
+            .select('id')
+            .eq('id', request.id)
+            .eq('status', 'pending')
+            .maybeSingle();
+        if (verifyError || stillPending) {
+            button.disabled = false;
+            showStatus(verifyError
+                ? 'Request status verify කළ නොහැක: ' + verifyError.message
+                : 'Request එක තවම pending. deposit_requests UPDATE/SELECT RLS policies පරීක්ෂා කරන්න.', '#e50b2e');
+            if (verifyError) console.error(verifyError);
+            return;
+        }
+
+        if (status === 'approved') {
+            const creditedLkr = amountUsd * 338;
+            const newBalance = Number(member.balance || 0) + creditedLkr;
+            const { data: updatedMember, error: balanceError } = await adminSupabase
+                .from('mobcash_accounts')
+                .update({ balance: newBalance })
+                .eq('epos_id', String(member.epos_id))
+                .eq('is_active', true)
+                .select('balance')
+                .maybeSingle();
+
+            if (balanceError || !updatedMember) {
+                await adminSupabase.from('deposit_requests')
+                    .update({ status: 'pending' })
+                    .eq('id', request.id)
+                    .eq('status', 'approved');
+                button.disabled = false;
+                showStatus('Mobcash balance එකට credit කළ නොහැකි වුණා; request නැවත pending කළා. UPDATE/RLS සහ active ePOS පරීක්ෂා කරන්න.', '#e50b2e');
+                console.error(balanceError);
+                return;
+            }
+        }
+
+        showStatus(status === 'approved'
+            ? `$${amountUsd.toFixed(2)} approve කර LKR ${(amountUsd * 338).toFixed(2)} Mobcash balance එකට එක් කළා.`
+            : 'Mobcash request එක rejected කළා.', '#28a745');
+        await loadMobcashDepositRequests();
+    }
+
+    mobcashRequestsBtn.addEventListener('click', async () => {
+        const isVisible = mobcashRequestsList.style.display === 'block';
+        mobcashRequestsList.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) await loadMobcashDepositRequests();
+    });
+
+    async function loadMobcashMembers() {
+        mobcashList.replaceChildren();
+        const loading = document.createElement('p');
+        loading.textContent = 'Active Mobcash සාමාජිකයින් load වෙමින්...';
+        mobcashList.appendChild(loading);
+
+        const { data, error } = await adminSupabase
+            .from('mobcash_accounts')
+            .select('id, email, phone, username, epos_id, first_name, last_name, balance, is_active, activated_at')
+            .eq('is_active', true)
+            .order('activated_at', { ascending: false });
+
+        mobcashList.replaceChildren();
+        if (error) {
+            const message = document.createElement('p');
+            message.textContent = 'දත්ත ලබාගත නොහැක. mobcash_accounts table එක සහ Supabase RLS policies පරීක්ෂා කරන්න.';
+            mobcashList.appendChild(message);
+            console.error(error);
+            return;
+        }
+        if (!data || data.length === 0) {
+            const message = document.createElement('p');
+            message.textContent = 'Active Mobcash සාමාජිකයින් නැත.';
+            mobcashList.appendChild(message);
+            return;
+        }
+
+        data.forEach((member) => {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'mobcash-card';
+            card.setAttribute('aria-expanded', 'false');
+            card.textContent = `${member.first_name || ''} ${member.last_name || ''} · ${member.username || member.email || 'Mobcash member'}`;
+
+            const details = document.createElement('div');
+            details.className = 'mobcash-details';
+            const addDetail = (label, value) => {
+                const line = document.createElement('p');
+                const strong = document.createElement('strong');
+                strong.textContent = label + ': ';
+                line.append(strong, document.createTextNode(value || 'සඳහන් කර නැත'));
+                details.appendChild(line);
+            };
+            addDetail('මුල් නම', member.first_name);
+            addDetail('අවසන් නම', member.last_name);
+            addDetail('Email', member.email);
+            addDetail('දුරකථන අංකය', member.phone);
+            addDetail('Username', member.username);
+            addDetail('ePOS ID', member.epos_id);
+            addDetail('Balance', `${Number(member.balance || 0).toFixed(2)} LKR`);
+            addDetail('තත්ත්වය', 'Active');
+            addDetail('Active කළ දිනය / වේලාව', member.activated_at ? new Date(member.activated_at).toLocaleString() : 'සඳහන් කර නැත');
+
+            const creditForm = document.createElement('div');
+            creditForm.className = 'mobcash-credit-form';
+            const creditAmount = document.createElement('input');
+            creditAmount.type = 'number';
+            creditAmount.min = '0.01';
+            creditAmount.step = '0.01';
+            creditAmount.placeholder = 'මුදල (LKR)';
+            creditAmount.setAttribute('aria-label', `${member.epos_id} සඳහා එකතු කරන LKR මුදල`);
+            const creditStatus = document.createElement('p');
+            creditStatus.className = 'mobcash-credit-status';
+            creditStatus.setAttribute('aria-live', 'polite');
+            const creditButton = document.createElement('button');
+            creditButton.type = 'button';
+            creditButton.className = 'btn btn-add';
+            creditButton.textContent = 'ePOS ID මඟින් මුදල් එකතු කරන්න';
+            creditButton.addEventListener('click', async () => {
+                const amount = Number(creditAmount.value);
+                creditStatus.textContent = '';
+                if (!Number.isFinite(amount) || amount <= 0) {
+                    creditStatus.textContent = 'කරුණාකර 0 ට වැඩි වලංගු මුදලක් ඇතුළත් කරන්න.';
+                    creditStatus.style.color = '#ff9800';
+                    return;
+                }
+                creditButton.disabled = true;
+                try {
+                    const newBalance = Number(member.balance || 0) + amount;
+                    const { data: updatedMember, error: creditError } = await adminSupabase
+                        .from('mobcash_accounts')
+                        .update({ balance: newBalance })
+                        .eq('epos_id', String(member.epos_id))
+                        .eq('is_active', true)
+                        .select('balance')
+                        .maybeSingle();
+
+                    if (creditError || !updatedMember) {
+                        const message = creditError?.message || 'Mobcash account was not updated. Check UPDATE permissions and RLS.';
+                        creditStatus.textContent = 'Mobcash balance එකට මුදල් එකතු කළ නොහැක: ' + message;
+                        creditStatus.style.color = '#e50b2e';
+                        showStatus('Mobcash balance update අසාර්ථකයි.', '#e50b2e');
+                        if (creditError) console.error(creditError);
+                        return;
+                    }
+
+                    member.balance = Number(updatedMember.balance);
+                    creditAmount.value = '';
+                    creditStatus.textContent = `LKR ${amount.toFixed(2)} Mobcash balance එකට සාර්ථකව එක් කළා.`;
+                    creditStatus.style.color = '#28a745';
+                    showStatus(`${member.epos_id} Mobcash balance එකට LKR ${amount.toFixed(2)} එකතු කළා.`, '#28a745');
+                    await loadMobcashMembers();
+
+                } catch (error) {
+                    creditStatus.textContent = 'මුදල් එකතු කිරීමේදී දෝෂයක්: ' + (error.message || 'නැවත උත්සාහ කරන්න.');
+                    creditStatus.style.color = '#e50b2e';
+                    console.error(error);
+                } finally {
+                    creditButton.disabled = false;
+                }
+            });
+            creditForm.append(creditAmount, creditButton, creditStatus);
+            details.appendChild(creditForm);
+
+            card.addEventListener('click', () => {
+                const opening = details.style.display !== 'block';
+                details.style.display = opening ? 'block' : 'none';
+                card.setAttribute('aria-expanded', String(opening));
+            });
+            mobcashList.append(card, details);
+        });
+    }
+
+    mobcashBtn.addEventListener('click', async () => {
+        const isVisible = mobcashPanel.style.display === 'block';
+        mobcashPanel.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) await loadMobcashMembers();
+    });
+
+    saveMobcashBtn.addEventListener('click', async () => {
+        const member = Object.fromEntries(
+            Object.entries(mobcashFields).map(([column, input]) => [column, input.value.trim()])
+        );
+        if (Object.values(member).some((value) => !value)) {
+            showStatus('කරුණාකර සියලුම Mobcash විස්තර පුරවන්න.', '#ff9800');
+            return;
+        }
+
+        saveMobcashBtn.disabled = true;
+        try {
+            // Database unique indexes enforce uniqueness without repeated lookup queries.
+            const { error } = await adminSupabase
+                .from('mobcash_accounts')
+                .insert({ ...member, is_active: true, activated_at: new Date().toISOString() });
+
+            if (error) {
+                if (error.code === '23505') {
+                    const details = `${error.message || ''} ${error.details || ''}`.toLowerCase();
+                    const duplicateLabels = [];
+                    if (details.includes('email')) duplicateLabels.push('Email');
+                    if (details.includes('username')) duplicateLabels.push('Username');
+                    if (details.includes('epos')) duplicateLabels.push('ePOS ID');
+                    showStatus(
+                        duplicateLabels.length
+                            ? 'දැනටමත් භාවිතයේ ඇති විස්තර: ' + duplicateLabels.join(', ')
+                            : 'Email, Username හෝ ePOS ID දැනටමත් භාවිතයේ ඇත.',
+                        '#ff9800'
+                    );
+                } else {
+                    showStatus('Mobcash විස්තර save කළ නොහැක: ' + (error.message || 'Table/RLS settings පරීක්ෂා කරන්න.'), '#e50b2e');
+                    console.error(error);
+                }
+                return;
+            }
+
+            Object.values(mobcashFields).forEach((input) => { input.value = ''; });
+            showStatus('Mobcash Active සාමාජිකයා සුරැකුණා.', '#28a745');
+            await loadMobcashMembers();
+        } catch (error) {
+            showStatus('Mobcash save කිරීමේදී දෝෂයක් ඇතිවුණා. Table/RLS settings පරීක්ෂා කරන්න.', '#e50b2e');
+            console.error(error);
+        } finally {
+            saveMobcashBtn.disabled = false;
+        }
+    });
+
+    // Customer support inbox (expects support_messages columns from the setup SQL).
+    const supportBtn = document.getElementById('supportBtn');
+    const supportPanel = document.getElementById('supportPanel');
+    const refreshSupportBtn = document.getElementById('refreshSupportBtn');
+    const supportUsers = document.getElementById('supportUsers');
+    const supportMessages = document.getElementById('supportMessages');
+    const supportConversationTitle = document.getElementById('supportConversationTitle');
+    const supportCustomerInfo = document.getElementById('supportCustomerInfo');
+    const supportReplyText = document.getElementById('supportReplyText');
+    const sendSupportReplyBtn = document.getElementById('sendSupportReplyBtn');
+    const supportRealtimeStatus = document.getElementById('supportRealtimeStatus');
+    let activeSupportUserId = null;
+    let lastSupportTap = { userId: null, time: 0 };
+    let supportThreads = [];
+    let supportRealtimeChannel = null;
+    let supportReloadTimer = null;
+
+    function connectSupportRealtime() {
+        if (supportRealtimeChannel) return;
+
+        supportRealtimeStatus.textContent = 'Connecting to live chat...';
+        supportRealtimeStatus.style.color = '#ffcc80';
+        supportRealtimeChannel = adminSupabase
+            .channel('support-messages-live')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'support_messages'
+            }, () => {
+                clearTimeout(supportReloadTimer);
+                supportReloadTimer = setTimeout(() => {
+                    if (supportPanel.style.display === 'block') loadSupportInbox();
+                }, 150);
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    supportRealtimeStatus.textContent = '● Live updates connected';
+                    supportRealtimeStatus.style.color = '#28a745';
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                    supportRealtimeStatus.textContent = 'Live updates unavailable — check Supabase Realtime settings.';
+                    supportRealtimeStatus.style.color = '#ff9800';
+                }
+            });
+    }
+
+    function getSupportAttachment(entry) {
+        const fields = [
+            ['media_url', entry.media_url],
+            ['image_url', entry.image_url],
+            ['photo_url', entry.photo_url],
+            ['attachment_url', entry.attachment_url],
+            ['file_url', entry.file_url],
+            ['media_path', entry.media_path],
+            ['image_path', entry.image_path],
+            ['photo_path', entry.photo_path],
+            ['attachment_path', entry.attachment_path],
+            ['image', entry.image],
+            ['photo', entry.photo],
+            ['attachment', entry.attachment]
+        ];
+        const selected = fields.find(([, value]) =>
+            (typeof value === 'string' && value.trim()) ||
+            (value && typeof value === 'object' && (value.url || value.publicUrl || value.path))
+        );
+        if (!selected) return null;
+
+        const [field, rawValue] = selected;
+        const value = typeof rawValue === 'string'
+            ? rawValue.trim()
+            : String(rawValue.url || rawValue.publicUrl || rawValue.path).trim();
+        const hintedType = String(entry.media_type || rawValue.type || '').toLowerCase();
+        const isVideo = hintedType.includes('video') || /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(value);
+        const isImage = hintedType.includes('image') || hintedType.includes('photo') ||
+            /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(value) ||
+            /^data:image\//i.test(value) || /image|photo/.test(field);
+
+        let url = value;
+        if (/^\/(storage\/v1\/)/i.test(url)) url = adminSupabaseUrl + url;
+        else if (/^storage\/v1\//i.test(url)) url = adminSupabaseUrl + '/' + url;
+
+        return { url, isImage, isVideo, isDirectUrl: /^https?:\/\//i.test(url) || /^data:(image|video)\//i.test(url) };
+    }
+
+    function renderSupportMessages() {
+        supportMessages.replaceChildren();
+        const thread = supportThreads.filter((entry) => String(entry.user_id) === String(activeSupportUserId));
+        thread.forEach((entry) => {
+            const bubble = document.createElement('div');
+            bubble.className = 'support-message ' + (entry.sender_role === 'admin' ? 'admin' : 'customer');
+
+            const meta = document.createElement('small');
+            const date = entry.created_at ? new Date(entry.created_at).toLocaleString() : '';
+            meta.textContent = (entry.sender_role === 'admin' ? 'Admin' : 'Customer') + (date ? ' · ' + date : '');
+            bubble.appendChild(meta);
+
+            if (entry.message) {
+                const text = document.createElement('p');
+                text.textContent = entry.message;
+                bubble.appendChild(text);
+            }
+
+            const attachment = getSupportAttachment(entry);
+            if (attachment) {
+                if (attachment.isDirectUrl && attachment.isVideo) {
+                    const video = document.createElement('video');
+                    video.src = attachment.url;
+                    video.controls = true;
+                    video.preload = 'metadata';
+                    bubble.appendChild(video);
+                } else if (attachment.isDirectUrl && attachment.isImage) {
+                    const image = document.createElement('img');
+                    image.src = attachment.url;
+                    image.alt = 'Customer support photo';
+                    image.loading = 'lazy';
+                    image.onerror = () => {
+                        image.remove();
+                        const error = document.createElement('p');
+                        error.className = 'support-attachment-error';
+                        error.textContent = 'Photo could not be loaded. Check that its Supabase Storage URL is public and valid.';
+                        bubble.appendChild(error);
+                    };
+                    bubble.appendChild(image);
+                } else if (attachment.isDirectUrl) {
+                    const link = document.createElement('a');
+                    link.className = 'support-attachment-link';
+                    link.href = attachment.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.textContent = 'Open attachment';
+                    bubble.appendChild(link);
+                } else {
+                    const error = document.createElement('p');
+                    error.className = 'support-attachment-error';
+                    error.textContent = 'Attachment path saved, but not a public URL: ' + attachment.url;
+                    bubble.appendChild(error);
+                }
+            }
+            supportMessages.appendChild(bubble);
+        });
+        supportMessages.scrollTop = supportMessages.scrollHeight;
+    }
+
+    async function loadSupportCustomerInfo(userId) {
+        supportCustomerInfo.style.display = 'block';
+        supportCustomerInfo.textContent = 'Loading account and personal information...';
+
+        // Support user IDs may be stored as either players.id or a linked user ID.
+        let player = null;
+        let playerError = null;
+        for (const key of ['id', 'user_id', 'auth_user_id', 'uid']) {
+            const result = await adminSupabase
+                .from('players')
+                .select('*')
+                .eq(key, userId)
+                .maybeSingle();
+            if (result.data) {
+                player = result.data;
+                break;
+            }
+            if (result.error) playerError = result.error;
+        }
+
+        supportCustomerInfo.replaceChildren();
+        const heading = document.createElement('h3');
+        heading.textContent = 'Personal Profile & Account';
+        supportCustomerInfo.appendChild(heading);
+
+        const addInfoLine = (label, value) => {
+            const line = document.createElement('p');
+            const strong = document.createElement('strong');
+            strong.textContent = `${label}: `;
+            const display = value === null || value === undefined || value === ''
+                ? 'Not provided'
+                : typeof value === 'object' ? JSON.stringify(value) : String(value);
+            line.append(strong, document.createTextNode(display));
+            supportCustomerInfo.appendChild(line);
+        };
+
+        if (!player) {
+            addInfoLine('Profile', playerError
+                ? 'Could not read the players record. Check Supabase SELECT/RLS permissions and the user ID link.'
+                : 'No matching players record found for this support user ID.');
+            if (playerError) console.error('Support profile lookup:', playerError);
+        } else {
+            const balance = player.balance ?? player.wallet_balance ?? player.wallet ?? player.credit;
+            addInfoLine('Balance', balance ?? 'Not provided');
+            addInfoLine('Currency', player.currency || 'LKR');
+
+            const fields = [
+                ['First Name', ['first_name', 'firstname', 'firstName', 'given_name', 'fname']],
+                ['Last Name', ['last_name', 'lastname', 'lastName', 'family_name', 'surname', 'lname']],
+                ['Date of Birth', ['date_of_birth', 'dateofbirth', 'dob', 'birth_date', 'birthday']],
+                ['Address', ['address', 'street_address', 'home_address', 'residential_address']],
+                ['NIC Number', ['nic_number', 'nic', 'national_id', 'national_id_number', 'identity_number']],
+                ['Profile Verified', ['profile_verified', 'is_verified', 'verified', 'verification_status']],
+                ['Locked', ['profile_locked', 'is_locked', 'locked', 'account_locked']]
+            ];
+            const shownKeys = new Set(['id', 'user_id', 'auth_user_id', 'uid', 'balance', 'wallet_balance', 'wallet', 'credit', 'currency']);
+            fields.forEach(([label, keys]) => {
+                const key = keys.find((candidate) => player[candidate] !== null && player[candidate] !== undefined && String(player[candidate]).trim() !== '');
+                if (key) {
+                    shownKeys.add(key);
+                    let value = player[key];
+                    if (label === 'Profile Verified' && typeof value === 'boolean') value = value ? 'Verified' : 'Not verified';
+                    if (label === 'Locked' && typeof value === 'boolean') value = value ? 'Locked' : 'Not locked';
+                    addInfoLine(label, value);
+                }
+            });
+
+            // Also show populated profile columns whose names differ from common conventions.
+            const privateKey = /(password|passwd|secret|token|api.?key|session|otp)/i;
+            Object.entries(player).forEach(([key, value]) => {
+                if (shownKeys.has(key) || value === null || value === undefined || value === '' || privateKey.test(key)) return;
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                    Object.entries(value).forEach(([nestedKey, nestedValue]) => {
+                        if (nestedValue !== null && nestedValue !== undefined && nestedValue !== '' && !privateKey.test(nestedKey)) {
+                            addInfoLine(nestedKey.replace(/[_-]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()), nestedValue);
+                        }
+                    });
+                    return;
+                }
+                addInfoLine(key.replace(/[_-]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()), value);
+            });
+        }
+
+        const depositsHeading = document.createElement('h3');
+        depositsHeading.textContent = 'Recent Deposits';
+        depositsHeading.style.marginTop = '12px';
+        supportCustomerInfo.appendChild(depositsHeading);
+        const { data: deposits, error: depositsError } = await adminSupabase
+            .from('deposit_requests')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        if (depositsError) {
+            addInfoLine('Deposits', 'Could not load records. Check deposit_requests SELECT/RLS permissions.');
+            console.error('Support deposit lookup:', depositsError);
+        } else if (!deposits || deposits.length === 0) {
+            addInfoLine('Deposits', 'No deposit records found for this user ID.');
+        } else {
+            deposits.forEach((deposit, index) => {
+                const amount = deposit.amount ?? deposit.deposit_amount ?? '-';
+                const status = deposit.status ?? 'status unavailable';
+                const date = deposit.created_at ? new Date(deposit.created_at).toLocaleString() : 'date unavailable';
+                addInfoLine(`Deposit ${index + 1}`, `${amount} · ${status} · ${date}`);
+            });
+        }
+    }
+
+    async function loadSupportInbox() {
+        supportUsers.textContent = 'Loading conversations...';
+        const { data, error } = await adminSupabase
+            .from('support_messages')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            supportUsers.textContent = 'Could not load support messages. Check the support_messages table columns and Supabase policies.';
+            supportMessages.replaceChildren();
+            console.error(error);
+            return;
+        }
+
+        supportThreads = data || [];
+        const latestByUser = new Map();
+        supportThreads.forEach((entry) => latestByUser.set(String(entry.user_id), entry));
+        const conversations = Array.from(latestByUser.entries()).sort((a, b) => {
+            return new Date(b[1].created_at || 0) - new Date(a[1].created_at || 0);
+        });
+
+        supportUsers.replaceChildren();
+        if (!conversations.length) {
+            supportUsers.textContent = 'No support messages yet.';
+            activeSupportUserId = null;
+            supportConversationTitle.textContent = 'Select a customer conversation';
+            supportMessages.replaceChildren();
+            sendSupportReplyBtn.disabled = true;
+            return;
+        }
+
+        conversations.forEach(([userId, latest]) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'support-user' + (String(activeSupportUserId) === userId ? ' active' : '');
+            const hasAttachment = Boolean(getSupportAttachment(latest));
+            const preview = latest.message || (hasAttachment ? '[photo/attachment]' : '[attachment]');
+            button.textContent = userId + ' · ' + preview.slice(0, 42);
+            button.addEventListener('click', () => {
+                const now = Date.now();
+                const isDoubleTap = lastSupportTap.userId === userId && now - lastSupportTap.time < 500;
+                lastSupportTap = { userId, time: isDoubleTap ? 0 : now };
+                activeSupportUserId = userId;
+                supportConversationTitle.textContent = 'Customer: ' + userId + ' · double-tap for account info';
+                sendSupportReplyBtn.disabled = false;
+                renderSupportMessages();
+
+                if (isDoubleTap) {
+                    supportConversationTitle.textContent = 'Customer: ' + userId;
+                    loadSupportCustomerInfo(userId);
+                } else {
+                    supportCustomerInfo.style.display = 'none';
+                    supportCustomerInfo.replaceChildren();
+                }
+            });
+            supportUsers.appendChild(button);
+        });
+
+        if (activeSupportUserId && conversations.some(([userId]) => userId === String(activeSupportUserId))) {
+            supportConversationTitle.textContent = 'Customer: ' + activeSupportUserId;
+            sendSupportReplyBtn.disabled = false;
+            renderSupportMessages();
+        } else {
+            activeSupportUserId = null;
+            supportConversationTitle.textContent = 'Select a customer conversation';
+            supportMessages.replaceChildren();
+            sendSupportReplyBtn.disabled = true;
+        }
+    }
+
+    async function sendSupportReply() {
+        if (!activeSupportUserId) return;
+        const message = supportReplyText.value.trim();
+        if (!message) {
+            showStatus('Write a reply message first.', '#ff9800');
+            return;
+        }
+
+        sendSupportReplyBtn.disabled = true;
+        const { error } = await adminSupabase
+            .from('support_messages')
+            .insert({
+                user_id: activeSupportUserId,
+                sender: 'admin',
+                sender_role: 'admin',
+                sender_type: 'admin',
+                is_admin: true,
+                message
+            });
+
+        sendSupportReplyBtn.disabled = false;
+        if (error) {
+            showStatus('Could not send reply: ' + error.message, '#e50b2e');
+            console.error(error);
+            return;
+        }
+        supportReplyText.value = '';
+        showStatus('Support reply sent.', '#28a745');
+        await loadSupportInbox();
+    }
+
+    supportBtn.addEventListener('click', async () => {
+        const isVisible = supportPanel.style.display === 'block';
+        supportPanel.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) {
+            connectSupportRealtime();
+            await loadSupportInbox();
+        }
+    });
+    refreshSupportBtn.addEventListener('click', loadSupportInbox);
+    sendSupportReplyBtn.addEventListener('click', sendSupportReply);
+
+    // Events
+    searchBtn.addEventListener('click', findUser);
+    addBtn.addEventListener('click', () => processTransaction('add'));
+    deductBtn.addEventListener('click', () => processTransaction('deduct'));
+
+    // Allow pressing "Enter" on the search box
+    searchIdInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') findUser();
+    });
+
+  </script>
 </body>
 </html>
